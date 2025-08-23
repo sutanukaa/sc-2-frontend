@@ -27,21 +27,27 @@ export default function CampusPlacementHero() {
       <TopRightShiningLight />
       <TopLeftShiningLight />
       
-      {/* Grid Background with Fade */}
-      <div className="absolute inset-0 w-full h-full">
-        {/* Grid Pattern */}
-        <div className="absolute inset-0 bg-transparent opacity-10 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
-        
-        {/* Top Fade */}
-        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black to-transparent z-10"></div>
-        
-        {/* Bottom Fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent z-10"></div>
-        
-        {/* Side Fades for Extra Polish */}
-        <div className="absolute top-0 bottom-0 left-0 w-16 bg-gradient-to-r from-black to-transparent z-10"></div>
-        <div className="absolute top-0 bottom-0 right-0 w-16 bg-gradient-to-l from-black to-transparent z-10"></div>
-      </div>
+             {/* Enhanced Grid Background with Fade */}
+       <div className="absolute inset-0 w-full h-full">
+         {/* Primary Grid Pattern */}
+         <div className="absolute inset-0 bg-transparent opacity-20 bg-[linear-gradient(to_right,#3b82f6_1px,transparent_1px),linear-gradient(to_bottom,#3b82f6_1px,transparent_1px)] bg-[size:3rem_3rem] pointer-events-none"></div>
+         
+         {/* Secondary Grid Pattern (larger) */}
+         <div className="absolute inset-0 bg-transparent opacity-10 bg-[linear-gradient(to_right,#3b82f6_2px,transparent_2px),linear-gradient(to_bottom,#3b82f6_2px,transparent_2px)] bg-[size:12rem_12rem] pointer-events-none"></div>
+         
+         {/* Grid Glow Effect */}
+         <div className="absolute inset-0 bg-transparent opacity-5 bg-[linear-gradient(to_right,#60a5fa_1px,transparent_1px),linear-gradient(to_bottom,#60a5fa_1px,transparent_1px)] bg-[size:3rem_3rem] pointer-events-none blur-[0.5px]"></div>
+
+         {/* Top Fade - Enhanced */}
+         <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-black via-black/80 to-transparent z-10"></div>
+
+         {/* Bottom Fade - Enhanced */}
+         <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black via-black/80 to-transparent z-10"></div>
+
+         {/* Side Fades - Enhanced */}
+         <div className="absolute top-0 bottom-0 left-0 w-24 bg-gradient-to-r from-black via-black/80 to-transparent z-10"></div>
+         <div className="absolute top-0 bottom-0 right-0 w-24 bg-gradient-to-l from-black via-black/80 to-transparent z-10"></div>
+       </div>
       
       {/* Navigation */}
       <div className="relative z-20 pt-8 pb-4 px-6">
@@ -50,7 +56,7 @@ export default function CampusPlacementHero() {
           logoAlt="CampusPlace Logo"
           items={navItems}
           activeHref="/"
-          pillColor="#ffffff"
+          pillColor="#3b82f6"
           hoveredPillTextColor="#000000"
           pillTextColor="#000000"
         />
@@ -61,13 +67,13 @@ export default function CampusPlacementHero() {
             <GradualSpacing
               textClassName="justify-start"
               visibility={isInView}
-              className="max-w-2xl text-5xl font-normal tracking-tighter text-white sm:text-7xl font-manrope"
+              className="max-w-2xl text-5xl font-normal tracking-tighter text-blue-400 sm:text-7xl font-manrope"
               text={"Smart Campus"}
             />
             <GradualSpacing
               textClassName="justify-start"
               visibility={isInView}
-              className="max-w-2xl text-5xl font-normal tracking-tighter text-white sm:text-7xl font-manrope"
+              className="max-w-2xl text-5xl font-normal tracking-tighter text-blue-400 sm:text-7xl font-manrope"
               text={"Placement Platform"}
             />
 
@@ -85,7 +91,7 @@ export default function CampusPlacementHero() {
             </div>
             
             <div className="flex gap-4 mt-8">
-              <button className="flex gap-2 justify-center items-center py-3 px-8 text-lg tracking-tighter text-center bg-white rounded-md ring-2 ring-offset-2 transition-all hover:ring-transparent group/button w-fit font-manrope text-md text-black ring-white/80 ring-offset-black hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-200 active:ring-white/70">
+              <button className="flex gap-2 justify-center items-center py-3 px-8 text-lg tracking-tighter text-center bg-blue-500 rounded-md ring-2 ring-offset-2 transition-all hover:ring-transparent group/button w-fit font-manrope text-md text-white ring-blue-400/80 ring-offset-black hover:scale-[1.02] active:scale-[0.98] hover:bg-blue-600 active:ring-blue-400/70">
                 Join as Student
                 <div
                   aria-hidden
@@ -93,7 +99,7 @@ export default function CampusPlacementHero() {
                 />
               </button>
               
-              <button className="flex gap-2 justify-center items-center py-3 px-8 text-lg tracking-tighter text-center border-2 border-gray-600 rounded-md transition-all hover:border-gray-400 group/button w-fit font-manrope text-md text-gray-300 hover:text-white hover:scale-[1.02] active:scale-[0.98]">
+              <button className="flex gap-2 justify-center items-center py-3 px-8 text-lg tracking-tighter text-center border-2 border-blue-600 rounded-md transition-all hover:border-blue-400 group/button w-fit font-manrope text-md text-blue-300 hover:text-blue-200 hover:scale-[1.02] active:scale-[0.98]">
                 Placement Cell Login
               </button>
             </div>
