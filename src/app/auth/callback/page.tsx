@@ -33,7 +33,7 @@ export default function CallbackPage() {
         if (result.needsOnboarding) {
           router.replace(`/onboarding?uid=${result.user.$id}`);
         } else {
-          router.replace("/dashboard");
+          router.replace("/home");
         }
       } catch (err: any) {
         console.error("OAuth Callback Error:", err);
