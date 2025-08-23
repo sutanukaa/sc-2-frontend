@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { 
-  Calendar, MapPin, Building, User, Award, TrendingUp, Clock, ChevronRight, ExternalLink, Bell, Search, GraduationCap,
-  Plus, Upload, X, Save, Eye, Users, BarChart3, Settings, FileText, DollarSign, Briefcase, Shield
+  Calendar, Building, Award, TrendingUp, Clock, Bell, Search,
+  Plus, X, Save, Users, BarChart3, Settings, Briefcase, Shield, GraduationCap
 } from 'lucide-react';
 
 interface UserStats {
@@ -54,20 +54,9 @@ interface Post {
   author: {
     name: string;
     role: string;
-    avatar: string;
   };
   timestamp: string;
   type: 'announcement' | 'opportunity' | 'update' | 'deadline';
-  tags: string[];
-  attachments?: {
-    name: string;
-    url: string;
-    file?: File;
-  }[];
-  stats: {
-    views: number;
-    applicants?: number;
-  };
   ctc?: {
     min: string;
     max: string;
@@ -90,22 +79,11 @@ interface UserRole {
   };
 }
 
+
 interface CreatePostForm {
   title: string;
   content: string;
   type: Post['type'];
-  tags: string[];
-  attachments: File[];
-  ctc: {
-    min: string;
-    max: string;
-    currency: string;
-  };
-  eligibility: {
-    minCGPA: string;
-    branches: string[];
-    batch: string[];
-  };
 }
 
 const RoleBasedDashboard: React.FC = () => {
@@ -116,24 +94,12 @@ const RoleBasedDashboard: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isProcessingInvite, setIsProcessingInvite] = useState<boolean>(false);
   const [showCreatePost, setShowCreatePost] = useState<boolean>(false);
-  const [newTagInput, setNewTagInput] = useState<string>('');
+
   
   const [createPostForm, setCreatePostForm] = useState<CreatePostForm>({
     title: '',
     content: '',
-    type: 'announcement',
-    tags: [],
-    attachments: [],
-    ctc: {
-      min: '',
-      max: '',
-      currency: 'INR'
-    },
-    eligibility: {
-      minCGPA: '',
-      branches: [],
-      batch: []
-    }
+    type: 'announcement'
   });
 
   const mockUserStats: UserStats = {
@@ -187,31 +153,25 @@ const RoleBasedDashboard: React.FC = () => {
 
   const mockPosts: Post[] = [
     {
-      id: "post-1",
-      title: "Google SDE Internship 2025 - Applications Open",
-      content: "Google is hiring for Software Development Engineer Internship positions. Eligibility: 8.0+ CGPA, CS/IT background. Application deadline: September 15, 2025.",
+      id: "1",
+      title: "Internship Opportunity at Microsoft",
+      content: "Microsoft is offering a summer internship for pre-final year students. The program will provide hands-on experience in software development, AI, and cloud technologies. Interested students must apply before the deadline.",
       author: {
-        name: "Dr. Priya Mehta",
-        role: "Placement Officer",
-        avatar: "👩‍💼"
+        name: "Soumyaraj Bag",
+        role: "Placement Coordinator",
       },
-      timestamp: "2 hours ago",
+      timestamp: "2025-08-24T10:30:00Z",
       type: "opportunity",
-      tags: ["Internship", "Google", "Software", "High Priority"],
-      stats: {
-        views: 342,
-        applicants: 89
-      },
       ctc: {
-        min: "8",
-        max: "12",
-        currency: "LPA"
+        min: "10",
+        max: "15",
+        currency: "LPA",
       },
       eligibility: {
-        minCGPA: "8.0",
+        minCGPA: "7.5",
         branches: ["CSE", "IT", "ECE"],
-        batch: ["2025", "2026"]
-      }
+        batch: ["2026"],
+      },
     },
     {
       id: "post-2",
@@ -220,17 +180,9 @@ const RoleBasedDashboard: React.FC = () => {
       author: {
         name: "Prof. Amit Kumar",
         role: "TPO",
-        avatar: "👨‍🏫"
       },
       timestamp: "5 hours ago",
-      type: "announcement",
-      tags: ["Microsoft", "PPT", "Campus Drive"],
-      attachments: [
-        { name: "Microsoft_PPT_Details.pdf", url: "#" }
-      ],
-      stats: {
-        views: 567
-      }
+      type: "announcement"
     }
   ];
 
@@ -240,10 +192,6 @@ const RoleBasedDashboard: React.FC = () => {
     { value: 'update', label: 'Update', icon: <BarChart3 className="w-4 h-4" />, color: 'purple' },
     { value: 'deadline', label: 'Deadline', icon: <Clock className="w-4 h-4" />, color: 'red' }
   ];
-
-  const branches = ['CSE', 'IT', 'ECE', 'EEE', 'ME', 'CE', 'CH', 'BT', 'TT', 'IPE'];
-  const batches = ['2024', '2025', '2026', '2027'];
-  const currencies = ['INR', 'USD', 'LPA'];
 
   useEffect(() => {
     const loadData = async () => {
@@ -314,22 +262,9 @@ const RoleBasedDashboard: React.FC = () => {
         author: {
           name: userStats?.name || "Admin",
           role: "Admin",
-          avatar: "👨‍💼"
         },
         timestamp: "Just now",
-        type: createPostForm.type,
-        tags: createPostForm.tags,
-        attachments: createPostForm.attachments.map(file => ({
-          name: file.name,
-          url: URL.createObjectURL(file),
-          file
-        })),
-        stats: {
-          views: 0,
-          applicants: 0
-        },
-        ctc: createPostForm.type === 'opportunity' ? createPostForm.ctc : undefined,
-        eligibility: createPostForm.type === 'opportunity' ? createPostForm.eligibility : undefined
+        type: createPostForm.type
       };
 
       setPosts(prevPosts => [newPost, ...prevPosts]);
@@ -338,11 +273,7 @@ const RoleBasedDashboard: React.FC = () => {
       setCreatePostForm({
         title: '',
         content: '',
-        type: 'announcement',
-        tags: [],
-        attachments: [],
-        ctc: { min: '', max: '', currency: 'INR' },
-        eligibility: { minCGPA: '', branches: [], batch: [] }
+        type: 'announcement'
       });
       
       setShowCreatePost(false);
@@ -351,61 +282,7 @@ const RoleBasedDashboard: React.FC = () => {
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    setCreatePostForm(prev => ({
-      ...prev,
-      attachments: [...prev.attachments, ...files]
-    }));
-  };
 
-  const removeAttachment = (index: number) => {
-    setCreatePostForm(prev => ({
-      ...prev,
-      attachments: prev.attachments.filter((_, i) => i !== index)
-    }));
-  };
-
-  const addTag = () => {
-    if (newTagInput.trim() && !createPostForm.tags.includes(newTagInput.trim())) {
-      setCreatePostForm(prev => ({
-        ...prev,
-        tags: [...prev.tags, newTagInput.trim()]
-      }));
-      setNewTagInput('');
-    }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    setCreatePostForm(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
-    }));
-  };
-
-  const toggleBranch = (branch: string) => {
-    setCreatePostForm(prev => ({
-      ...prev,
-      eligibility: {
-        ...prev.eligibility,
-        branches: prev.eligibility.branches.includes(branch)
-          ? prev.eligibility.branches.filter(b => b !== branch)
-          : [...prev.eligibility.branches, branch]
-      }
-    }));
-  };
-
-  const toggleBatch = (batch: string) => {
-    setCreatePostForm(prev => ({
-      ...prev,
-      eligibility: {
-        ...prev.eligibility,
-        batch: prev.eligibility.batch.includes(batch)
-          ? prev.eligibility.batch.filter(b => b !== batch)
-          : [...prev.eligibility.batch, batch]
-      }
-    }));
-  };
 
   const getPostTypeColor = (type: Post['type']) => {
     switch (type) {
@@ -423,6 +300,32 @@ const RoleBasedDashboard: React.FC = () => {
       case 'eligible': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
       case 'pending': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
       default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+    }
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return timestamp; // Return as-is if not a valid date
+      }
+      
+      const now = new Date();
+      const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+      
+      if (diffInHours < 1) {
+        return 'Just now';
+      } else if (diffInHours < 24) {
+        return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+      } else {
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
+    } catch {
+      return timestamp; // Return as-is if parsing fails
     }
   };
 
@@ -464,7 +367,6 @@ const RoleBasedDashboard: React.FC = () => {
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Post Type Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-3">Post Type</label>
             <div className="grid grid-cols-2 gap-3">
@@ -485,7 +387,6 @@ const RoleBasedDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Title *</label>
             <input
@@ -497,7 +398,6 @@ const RoleBasedDashboard: React.FC = () => {
             />
           </div>
 
-          {/* Content */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Content *</label>
             <textarea
@@ -507,202 +407,7 @@ const RoleBasedDashboard: React.FC = () => {
               rows={5}
               className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none resize-vertical"
             />
-          </div>
 
-          {/* CTC Section - Only for opportunities */}
-          {createPostForm.type === 'opportunity' && (
-            <div className="bg-gray-800 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                Compensation Details
-              </h3>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Min Package</label>
-                  <input
-                    type="text"
-                    value={createPostForm.ctc.min}
-                    onChange={(e) => setCreatePostForm(prev => ({
-                      ...prev,
-                      ctc: { ...prev.ctc, min: e.target.value }
-                    }))}
-                    placeholder="e.g., 8"
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Max Package</label>
-                  <input
-                    type="text"
-                    value={createPostForm.ctc.max}
-                    onChange={(e) => setCreatePostForm(prev => ({
-                      ...prev,
-                      ctc: { ...prev.ctc, max: e.target.value }
-                    }))}
-                    placeholder="e.g., 12"
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Currency</label>
-                  <select
-                    value={createPostForm.ctc.currency}
-                    onChange={(e) => setCreatePostForm(prev => ({
-                      ...prev,
-                      ctc: { ...prev.ctc, currency: e.target.value }
-                    }))}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-blue-500 focus:outline-none"
-                  >
-                    {currencies.map(currency => (
-                      <option key={currency} value={currency}>{currency}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Eligibility Section - Only for opportunities */}
-          {createPostForm.type === 'opportunity' && (
-            <div className="bg-gray-800 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-                <GraduationCap className="w-4 h-4" />
-                Eligibility Criteria
-              </h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Minimum CGPA</label>
-                  <input
-                    type="text"
-                    value={createPostForm.eligibility.minCGPA}
-                    onChange={(e) => setCreatePostForm(prev => ({
-                      ...prev,
-                      eligibility: { ...prev.eligibility, minCGPA: e.target.value }
-                    }))}
-                    placeholder="e.g., 8.0"
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-gray-400 mb-2">Eligible Branches</label>
-                  <div className="flex flex-wrap gap-2">
-                    {branches.map(branch => (
-                      <button
-                        key={branch}
-                        type="button"
-                        onClick={() => toggleBranch(branch)}
-                        className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                          createPostForm.eligibility.branches.includes(branch)
-                            ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                            : 'bg-gray-700 text-gray-400 border-gray-600 hover:border-gray-500'
-                        }`}
-                      >
-                        {branch}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-gray-400 mb-2">Eligible Batches</label>
-                  <div className="flex flex-wrap gap-2">
-                    {batches.map(batch => (
-                      <button
-                        key={batch}
-                        type="button"
-                        onClick={() => toggleBatch(batch)}
-                        className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                          createPostForm.eligibility.batch.includes(batch)
-                            ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                            : 'bg-gray-700 text-gray-400 border-gray-600 hover:border-gray-500'
-                        }`}
-                      >
-                        {batch}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Tags */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Tags</label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={newTagInput}
-                onChange={(e) => setNewTagInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                placeholder="Add a tag..."
-                className="flex-1 p-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm focus:border-blue-500 focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={addTag}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-              >
-                Add
-              </button>
-            </div>
-            {createPostForm.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {createPostForm.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="px-2 py-1 bg-gray-700 text-gray-300 rounded-md text-xs flex items-center gap-1"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      className="text-gray-400 hover:text-red-400"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* File Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Attachments</label>
-            <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-gray-500 transition-colors">
-              <input
-                type="file"
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
-                id="file-upload"
-                accept=".pdf,.doc,.docx,.jpg,.png,.jpeg"
-              />
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-400 text-sm">Click to upload or drag and drop files</p>
-                <p className="text-gray-500 text-xs mt-1">PDF, DOC, DOCX, JPG, PNG (Max 10MB each)</p>
-              </label>
-            </div>
-            {createPostForm.attachments.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {createPostForm.attachments.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-gray-800 rounded">
-                    <span className="text-sm text-gray-300">{file.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeAttachment(index)}
-                      className="text-red-400 hover:text-red-300"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Action Buttons */}
@@ -807,7 +512,7 @@ const RoleBasedDashboard: React.FC = () => {
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-4">Organization Invitation</h2>
                         <p className="text-gray-300 mb-6 max-w-md mx-auto">
-                          You've been invited to join <strong>{userOrgStatus.activeInvite.organization.name}</strong> by {userOrgStatus.activeInvite.invitedBy.name}.
+                          You&apos;ve been invited to join <strong>{userOrgStatus.activeInvite.organization.name}</strong> by {userOrgStatus.activeInvite.invitedBy.name}.
                         </p>
                         
                         <div className="bg-gray-800 rounded-lg p-6 mb-6 text-left max-w-md mx-auto">
@@ -836,7 +541,7 @@ const RoleBasedDashboard: React.FC = () => {
                           
                           {userOrgStatus.activeInvite.message && (
                             <div className="mt-4 pt-4 border-t border-gray-700">
-                              <p className="text-gray-300 text-sm italic">"{userOrgStatus.activeInvite.message}"</p>
+                              <p className="text-gray-300 text-sm italic">&quot;{userOrgStatus.activeInvite.message}&quot;</p>
                             </div>
                           )}
                         </div>
@@ -868,103 +573,95 @@ const RoleBasedDashboard: React.FC = () => {
                           onClick={() => handlePostClick(post.id)}
                           className="bg-gray-900 rounded-xl p-6 border border-gray-800 hover:border-gray-700 transition-all cursor-pointer group"
                         >
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                                {post.author.avatar}
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-white">{post.author.name}</h4>
-                                <p className="text-sm text-gray-400">{post.author.role}</p>
-                              </div>
+                          <div className="space-y-4">
+                            <div>
+                              <h3 className="text-lg font-semibold text-white mb-2">{post.title}</h3>
+                              {/* <p className="text-gray-300 mb-3">{post.description}</p> */}
+                              <p className="text-gray-400 text-sm">{post.content}</p>
                             </div>
+
+                            {/* Post Type Badge */}
                             <div className="flex items-center gap-2">
-                              <span className={`px-2 py-1 rounded-full text-xs border ${getPostTypeColor(post.type)}`}>
-                                {post.type}
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPostTypeColor(post.type)}`}>
+                                {post.type === 'opportunity' ? 'Job Opportunity' : 
+                                 post.type === 'announcement' ? 'Announcement' : 
+                                 post.type === 'update' ? 'Update' : 'Deadline'}
                               </span>
-                              <span className="text-sm text-gray-500">{post.timestamp}</span>
                             </div>
-                          </div>
 
-                          <h3 className="text-lg font-semibold text-white mb-3 group-hover:text-blue-400 transition-colors">
-                            {post.title}
-                          </h3>
-                          
-                          <p className="text-gray-300 mb-4 line-clamp-3">
-                            {post.content}
-                          </p>
-
-                          {/* CTC Display for opportunities */}
-                          {post.ctc && (
-                            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                              <div className="flex items-center gap-2 mb-2">
-                                <DollarSign className="w-4 h-4 text-green-400" />
-                                <span className="text-sm font-medium text-green-400">Package</span>
-                              </div>
-                              <p className="text-white font-semibold">
-                                {post.ctc.min} - {post.ctc.max} {post.ctc.currency}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Eligibility Display for opportunities */}
-                          {post.eligibility && (
-                            <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                              <div className="flex items-center gap-2 mb-2">
-                                <GraduationCap className="w-4 h-4 text-blue-400" />
-                                <span className="text-sm font-medium text-blue-400">Eligibility</span>
-                              </div>
-                              <div className="space-y-1 text-sm text-white">
-                                {post.eligibility.minCGPA && (
-                                  <p>Min CGPA: {post.eligibility.minCGPA}</p>
-                                )}
-                                {post.eligibility.branches.length > 0 && (
-                                  <p>Branches: {post.eligibility.branches.join(', ')}</p>
-                                )}
-                                {post.eligibility.batch.length > 0 && (
-                                  <p>Batches: {post.eligibility.batch.join(', ')}</p>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {post.tags.map((tag, index) => (
-                              <span
-                                key={index}
-                                className="px-2 py-1 bg-gray-800 text-gray-300 rounded-md text-xs border border-gray-700"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-
-                          {post.attachments && post.attachments.length > 0 && (
-                            <div className="mb-4">
-                              <p className="text-sm text-gray-400 mb-2">Attachments:</p>
-                              {post.attachments.map((attachment, index) => (
-                                <div key={index} className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300">
-                                  <ExternalLink className="w-4 h-4" />
-                                  <span>{attachment.name}</span>
+                            {/* CTC Display for opportunities */}
+                            {post.ctc && (
+                              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Briefcase className="w-4 h-4 text-green-400" />
+                                  <span className="text-sm font-medium text-green-400">Compensation</span>
                                 </div>
-                              ))}
-                            </div>
-                          )}
+                                <p className="text-white font-semibold">
+                                  {post.ctc.min} - {post.ctc.max} {post.ctc.currency}
+                                </p>
+                              </div>
+                            )}
 
-                          <div className="flex items-center justify-between pt-4 border-t border-gray-800">
-                            <div className="flex items-center gap-4 text-sm text-gray-400">
-                              <span className="flex items-center gap-1">
-                                <Eye className="w-4 h-4" />
-                                {post.stats.views} views
-                              </span>
-                              {post.stats.applicants !== undefined && (
-                                <span className="flex items-center gap-1">
-                                  <Users className="w-4 h-4" />
-                                  {post.stats.applicants} applicants
-                                </span>
-                              )}
+                            {/* Eligibility Display for opportunities */}
+                            {post.eligibility && (
+                              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <GraduationCap className="w-4 h-4 text-blue-400" />
+                                  <span className="text-sm font-medium text-blue-400">Eligibility Criteria</span>
+                                </div>
+                                <div className="space-y-2 text-sm text-white">
+                                  {post.eligibility.minCGPA && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-gray-400">Min CGPA:</span>
+                                      <span className="font-medium">{post.eligibility.minCGPA}</span>
+                                    </div>
+                                  )}
+                                  {post.eligibility.branches && post.eligibility.branches.length > 0 && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-gray-400">Branches:</span>
+                                      <div className="flex flex-wrap gap-1">
+                                        {post.eligibility.branches.map((branch, index) => (
+                                          <span key={index} className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded-md text-xs border border-blue-500/30">
+                                            {branch}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {post.eligibility.batch && post.eligibility.batch.length > 0 && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-gray-400">Batches:</span>
+                                      <div className="flex flex-wrap gap-1">
+                                        {post.eligibility.batch.map((batch, index) => (
+                                          <span key={index} className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded-md text-xs border border-purple-500/30">
+                                            {batch}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Author and Time */}
+                            <div className="flex items-center justify-between pt-2 border-t border-gray-800">
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                                    {post.author.name.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <p className="text-white text-sm font-medium">{post.author.name}</p>
+                                    <p className="text-gray-400 text-xs">{post.author.role}</p>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 text-gray-400 text-sm">
+                                <Clock className="w-4 h-4" />
+                                {formatTimestamp(post.timestamp)}
+                              </div>
                             </div>
-                            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-400 transition-colors" />
                           </div>
                         </div>
                       ))

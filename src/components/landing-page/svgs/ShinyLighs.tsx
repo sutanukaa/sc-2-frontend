@@ -1,19 +1,19 @@
-"use client";
-
-export function TopRightShiningLight() {
-  return (
-    <div className="absolute top-0 right-0 w-96 h-96 pointer-events-none">
-      <div className="absolute inset-0 bg-gradient-radial from-blue-500/20 via-purple-500/10 to-transparent blur-3xl"></div>
-      <div className="absolute top-10 right-10 w-32 h-32 bg-gradient-radial from-blue-400/30 to-transparent rounded-full blur-2xl"></div>
-    </div>
-  );
-}
+import React from "react";
 
 export function TopLeftShiningLight() {
   return (
-    <div className="absolute top-0 left-0 w-96 h-96 pointer-events-none">
-      <div className="absolute inset-0 bg-gradient-radial from-purple-500/20 via-blue-500/10 to-transparent blur-3xl"></div>
-      <div className="absolute top-10 left-10 w-32 h-32 bg-gradient-radial from-purple-400/30 to-transparent rounded-full blur-2xl"></div>
-    </div>
+    <svg width="300" height="300" className="absolute left-0 top-0 z-0 pointer-events-none" style={{filter: 'blur(60px)'}}>
+      <circle cx="60" cy="60" r="80" fill="#60a5fa" fillOpacity="0.35" />
+      <circle cx="120" cy="120" r="60" fill="#a78bfa" fillOpacity="0.25" />
+    </svg>
+  );
+}
+
+export function TopRightShiningLight() {
+  return (
+    <svg width="300" height="300" className="absolute right-0 top-0 z-0 pointer-events-none" style={{filter: 'blur(60px)'}}>
+      <circle cx="240" cy="60" r="80" fill="#f472b6" fillOpacity="0.35" />
+      <circle cx="180" cy="120" r="60" fill="#facc15" fillOpacity="0.25" />
+    </svg>
   );
 }

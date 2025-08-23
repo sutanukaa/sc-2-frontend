@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import clsx from "clsx";
 import { CompanyMarquee } from "./components/CompanyMarquee";
 import GradualSpacing from "./components/GradualSpacing";
@@ -14,61 +14,126 @@ import {
 } from "./svgs/ShinyLighs";
 
 export default function LandingPage() {
+  const [activeSection, setActiveSection] = useState("home");
+  
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      const navbarHeight = 80; // Account for fixed navbar height
+      const targetPosition = element.offsetTop - navbarHeight;
+      const startPosition = window.pageYOffset;
+      const distance = targetPosition - startPosition;
+      const duration = 1200; // Increased duration for smoother animation
+      let start: number | null = null;
+
+      const animateScroll = (timestamp: number) => {
+        if (!start) start = timestamp;
+        const progress = Math.min(timestamp - start, duration);
+        const ease = easeInOutQuart(progress / duration);
+        
+        window.scrollTo(0, startPosition + (distance * ease));
+        
+        if (progress < duration) {
+          requestAnimationFrame(animateScroll);
+        }
+      };
+
+      requestAnimationFrame(animateScroll);
+    }
+  };
+
+  // Smoother easing function for animation
+  const easeInOutQuart = (t: number): number => {
+    return t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = ["home", "about", "features", "contact"];
+      const navbarHeight = 80;
+      const scrollPosition = window.scrollY + navbarHeight + 100; // Account for navbar and add buffer
+
+      let currentSection = "home"; // Default to home
+
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const sectionId = sections[i];
+        const element = document.getElementById(sectionId);
+        if (element) {
+          const { offsetTop } = element;
+          if (scrollPosition >= offsetTop) {
+            currentSection = sectionId;
+            break;
+          }
+        }
+      }
+
+      setActiveSection(currentSection);
+    };
+
+    // Use requestAnimationFrame for smoother performance
+    let ticking = false;
+    const smoothHandleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", smoothHandleScroll, { passive: true });
+    handleScroll(); // Call once to set initial state
+
+    return () => {
+      window.removeEventListener("scroll", smoothHandleScroll);
+    };
+  }, []);
+
   const navItems = [
-    { label: "Home", href: "/" },
-    { label: "About", href: "/about" },
-    { label: "Features", href: "/features" },
-    { label: "Contact", href: "/contact" },
+    { label: "Home", sectionId: "home" },
+    { label: "About", sectionId: "about" },
+    { label: "Features", sectionId: "features" },
+    { label: "Contact", sectionId: "contact" },
   ];
   
   const heroRef = useRef(null);
   const isInView = useInView(heroRef);
 
   return (
-    <div className="min-h-screen bg-black">
-      {/* Hero Section */}
-      <section className="relative w-full min-h-screen bg-black">
-        <TopRightShiningLight />
-        <TopLeftShiningLight />
+    <div className="min-h-screen bg-black relative">
+      {/* Global Grid Background */}
+      <div className="fixed inset-0 w-full h-full pointer-events-none z-10">
+        {/* Primary Grid Pattern */}
+        <div className="absolute inset-0 bg-transparent opacity-50 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
         
-        {/* Enhanced Grid Background with Fade */}
-        <div className="absolute inset-0 w-full h-full">
-          {/* Primary Grid Pattern */}
-          <div className="absolute inset-0 bg-transparent opacity-20 bg-[linear-gradient(to_right,#3b82f6_1px,transparent_1px),linear-gradient(to_bottom,#3b82f6_1px,transparent_1px)] bg-[size:3rem_3rem] pointer-events-none"></div>
-          
-          {/* Secondary Grid Pattern (larger) */}
-          <div className="absolute inset-0 bg-transparent opacity-10 bg-[linear-gradient(to_right,#3b82f6_2px,transparent_2px),linear-gradient(to_bottom,#3b82f6_2px,transparent_2px)] bg-[size:12rem_12rem] pointer-events-none"></div>
-          
-          {/* Grid Glow Effect */}
-          <div className="absolute inset-0 bg-transparent opacity-5 bg-[linear-gradient(to_right,#60a5fa_1px,transparent_1px),linear-gradient(to_bottom,#60a5fa_1px,transparent_1px)] bg-[size:3rem_3rem] pointer-events-none blur-[0.5px]"></div>
+        {/* Secondary Grid Pattern (larger) */}
+        <div className="absolute inset-0 bg-transparent opacity-30 bg-[linear-gradient(to_right,#ffffff_2px,transparent_2px),linear-gradient(to_bottom,#ffffff_2px,transparent_2px)] bg-[size:16rem_16rem]"></div>
+      </div>
 
-          {/* Top Fade - Enhanced */}
-          <div className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-black via-black/80 to-transparent z-10"></div>
-
-          {/* Bottom Fade - Enhanced */}
-          <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black via-black/80 to-transparent z-10"></div>
-
-          {/* Side Fades - Enhanced */}
-          <div className="absolute top-0 bottom-0 left-0 w-24 bg-gradient-to-r from-black via-black/80 to-transparent z-10"></div>
-          <div className="absolute top-0 bottom-0 right-0 w-24 bg-gradient-to-l from-black via-black/80 to-transparent z-10"></div>
-        </div>
-        
-        {/* Navigation */}
-        <div className="relative z-20 pt-8 pb-4 px-6">
+      {/* Fixed Navigation */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800/50 transition-all duration-300">
+        <div className="px-6 py-4">
           <NavigationBar
             logo="/logo.png"
             logoAlt="CampusPlace Logo"
             items={navItems}
-            activeHref="/"
+            activeSection={activeSection}
             pillColor="#3b82f6"
-            hoveredPillTextColor="#000000"
             pillTextColor="#000000"
+            onNavClick={scrollToSection}
           />
         </div>
+      </div>
+
+      {/* Hero Section */}
+      <section id="home" className="relative w-full min-h-screen bg-black/80 pt-20 z-20">
+        <TopRightShiningLight />
+        <TopLeftShiningLight />
 
         {/* Hero Content */}
         <div className="justify-between md:flex px-6">
-          <Container className="relative py-8 ml-auto sm:pt-16 sm:pb-24">
+          <Container className="relative py-8 ml-auto sm:pt-16 sm:pb-24 md:w-[45%] lg:w-[50%]">
             <div ref={heroRef} className="mx-auto max-w-2xl lg:px-12 lg:max-w-4xl">
               <GradualSpacing
                 textClassName="justify-start"
@@ -129,20 +194,20 @@ export default function LandingPage() {
           </Container>
           
           {/* Company Marquee */}
-          <div className="hidden mr-auto md:block md:w-1/2">
+          <div className="hidden md:block md:w-[55%] lg:w-[50%] md:ml-8 lg:ml-12 mr-auto">
             <CompanyMarquee />
           </div>
         </div>
       </section>
 
       {/* About Section */}
-      <AboutSection />
+      <AboutSection id="about" />
 
       {/* Features Section */}
-      <FeaturesSection />
+      <FeaturesSection id="features" />
 
       {/* Footer */}
-      <footer className="bg-black text-white py-12">
+      <footer id="contact" className="bg-black/80 text-white py-12 pt-32 relative z-20">
         <Container>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>

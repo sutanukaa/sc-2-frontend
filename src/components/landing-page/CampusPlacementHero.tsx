@@ -26,7 +26,22 @@ export default function CampusPlacementHero() {
     <div className="relative w-full min-h-full bg-black">
       <TopRightShiningLight />
       <TopLeftShiningLight />
-      <div className="absolute -z-1 inset-0 h-[600px] w-full bg-transparent opacity-5 bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-[size:6rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]"></div>
+      
+      {/* Grid Background with Fade */}
+      <div className="absolute inset-0 w-full h-full">
+        {/* Grid Pattern */}
+        <div className="absolute inset-0 bg-transparent opacity-10 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
+        
+        {/* Top Fade */}
+        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black to-transparent z-10"></div>
+        
+        {/* Bottom Fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent z-10"></div>
+        
+        {/* Side Fades for Extra Polish */}
+        <div className="absolute top-0 bottom-0 left-0 w-16 bg-gradient-to-r from-black to-transparent z-10"></div>
+        <div className="absolute top-0 bottom-0 right-0 w-16 bg-gradient-to-l from-black to-transparent z-10"></div>
+      </div>
       
       {/* Navigation */}
       <div className="relative z-20 pt-8 pb-4 px-6">
@@ -35,8 +50,8 @@ export default function CampusPlacementHero() {
           logoAlt="CampusPlace Logo"
           items={navItems}
           activeHref="/"
-          pillColor="#3b82f6"
-          hoveredPillTextColor="#ffffff"
+          pillColor="#ffffff"
+          hoveredPillTextColor="#000000"
           pillTextColor="#000000"
         />
       </div>
@@ -70,7 +85,7 @@ export default function CampusPlacementHero() {
             </div>
             
             <div className="flex gap-4 mt-8">
-              <button className="flex gap-2 justify-center items-center py-3 px-8 text-lg tracking-tighter text-center bg-gradient-to-br rounded-md ring-2 ring-offset-2 transition-all hover:ring-transparent group/button w-fit from-blue-500 to-purple-600 font-manrope text-md text-white ring-blue-500/80 ring-offset-black hover:scale-[1.02] active:scale-[0.98] active:ring-blue-500/70">
+              <button className="flex gap-2 justify-center items-center py-3 px-8 text-lg tracking-tighter text-center bg-white rounded-md ring-2 ring-offset-2 transition-all hover:ring-transparent group/button w-fit font-manrope text-md text-black ring-white/80 ring-offset-black hover:scale-[1.02] active:scale-[0.98] hover:bg-gray-200 active:ring-white/70">
                 Join as Student
                 <div
                   aria-hidden
