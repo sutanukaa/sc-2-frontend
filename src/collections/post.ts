@@ -1,4 +1,4 @@
-// lib/post.ts
+// collections/post.ts
 import { databases } from "@/lib/appwrite";
 import { ID, Query } from "appwrite";
 
@@ -7,17 +7,41 @@ const POSTS_COLLECTION_ID =
   process.env.NEXT_PUBLIC_APPWRITE_POSTS_COLLECTION_ID!;
 
 export async function createPost(data: {
-  org_id: string;
-  created_by: string;
-  company_name: string;
-  role: string;
-  description: string;
-  criteria?: string;
-  duration?: string;
-  summarisation?: string;
-  mail_attachment_ref?: string;
-  attachment_1_desc?: string;
-  attachment_2_desc?: string;
+  title: string;
+  content: string;
+  company?: string;
+  website?: string;
+  registration_link?: string;
+  role?: string;
+  ctc?: string;
+  type:
+    | "INTERNSHIP"
+    | "JOB"
+    | "ANNOUNCEMENT"
+    | "OPPORTUNITY"
+    | "DEADLINE"
+    | "UPDATE";
+  criteria?: {
+    cgpa?: number;
+    backlogs?: number;
+    skills?: string[];
+    courses?: string[];
+    experience?: string;
+  };
+  author: {
+    name: string;
+    role: string;
+    avatar?: string;
+  };
+  responsibilities?: string[];
+  benefits?: string[];
+  applicationProcess?: string[];
+  eligibility?: {
+    minCGPA?: string;
+    branches?: string[];
+    batch?: string[];
+  };
+  timestamp: string;
 }) {
   const post = await databases.createDocument(
     DATABASE_ID,
@@ -25,25 +49,17 @@ export async function createPost(data: {
     ID.unique(),
     {
       ...data,
-      status: "active",
     }
   );
   return post;
 }
 
 export async function getPost(postId: string) {
-  const post = await databases.getDocument(
-    DATABASE_ID,
-    POSTS_COLLECTION_ID,
-    postId
-  );
-  return post;
+  return databases.getDocument(DATABASE_ID, POSTS_COLLECTION_ID, postId);
 }
 
 export async function getAllPosts() {
-  const response = await databases.listDocuments(DATABASE_ID, POSTS_COLLECTION_ID, [
+  return databases.listDocuments(DATABASE_ID, POSTS_COLLECTION_ID, [
     Query.orderDesc("$createdAt"),
   ]);
-  return response;
 }
-  

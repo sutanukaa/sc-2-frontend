@@ -1,3 +1,4 @@
+// app/api/posts/[id]/route.ts
 import { getPost } from "@/collections/post";
 import { NextResponse } from "next/server";
 
