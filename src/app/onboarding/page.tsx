@@ -2,6 +2,7 @@
 import React, { useState, useRef, KeyboardEvent } from 'react';
 import { ChevronRight, ChevronLeft, Upload, X, CheckCircle, User, GraduationCap, FileText, Award, Calendar, MapPin, Phone, Mail, Building } from 'lucide-react';
 import { z } from 'zod';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
 const FileSchema = z.object({
   file: z.any().nullable(),
@@ -45,90 +46,78 @@ type FileData = z.infer<typeof FileSchema>;
 type Skill = z.infer<typeof SkillSchema>;
 
 const OnboardingForm: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [formData, setFormData] = useState<OnboardingFormData>({
-    name: '',
-    gender: undefined,
-    course: '',
-    stream: '',
-    batch: '',
-    institute: '',
-    email: '',
-    phone: '',
-    address: '',
-    dob: '',
-    active_backlog: 0,
-    resume: null,
-    results: {
-      '10th': { file: null, extractedData: '' },
-      '12th': { file: null, extractedData: '' },
-      'sem1': { file: null, extractedData: '' },
-      'sem2': { file: null, extractedData: '' },
-      'sem3': { file: null, extractedData: '' },
-      'sem4': { file: null, extractedData: '' },
-      'sem5': { file: null, extractedData: '' },
-      'sem6': { file: null, extractedData: '' },
-      'sem7': { file: null, extractedData: '' },
-    },
-    skills: []
-  });
+    const router = useRouter();
+    const [currentStep, setCurrentStep] = useState<number>(1);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const steps = [
+        { id: 1, title: 'Personal Info', icon: User },
+        { id: 2, title: 'Academic Details', icon: GraduationCap },
+        { id: 3, title: 'Resume Upload', icon: FileText },
+        { id: 4, title: 'Academic Results', icon: Award },
+        { id: 5, title: 'Skills & Expertise', icon: CheckCircle }
+      ];
+    const [formData, setFormData] = useState<OnboardingFormData>({
+      name: '',
+      gender: undefined,
+      course: '',
+      stream: '',
+      batch: '',
+      institute: '',
+      email: '',
+      phone: '',
+      address: '',
+      dob: '',
+      active_backlog: 0,
+      resume: null,
+      results: {
+        '10th': { file: null, extractedData: '' },
+        '12th': { file: null, extractedData: '' },
+        'sem1': { file: null, extractedData: '' },
+        'sem2': { file: null, extractedData: '' },
+        'sem3': { file: null, extractedData: '' },
+        'sem4': { file: null, extractedData: '' },
+        'sem5': { file: null, extractedData: '' },
+        'sem6': { file: null, extractedData: '' },
+        'sem7': { file: null, extractedData: '' },
+      },
+      skills: []
+    });
   
-  const [skillInput, setSkillInput] = useState<string>('');
-  const [skillLevel, setSkillLevel] = useState<Skill['level']>('Beginner');
-  const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const skillInputRef = useRef<HTMLInputElement>(null);
-
-  const totalSteps = 5;
-
-  const steps = [
-    { id: 1, title: 'Personal Info', icon: User },
-    { id: 2, title: 'Academic Details', icon: GraduationCap },
-    { id: 3, title: 'Resume Upload', icon: FileText },
-    { id: 4, title: 'Academic Results', icon: Award },
-    { id: 5, title: 'Skills & Expertise', icon: CheckCircle }
-  ];
-
-  const processFile = async (file: File, resultKey?: string): Promise<string> => {
-    const fileKey = resultKey || 'resume';
-    setUploadingFiles(prev => ({ ...prev, [fileKey]: true }));
-    
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const mockExtractedData = resultKey 
-      ? `Extracted: ${resultKey.toUpperCase()} - CGPA: 8.5, Year: 2023`
-      : 'Software Engineer with 2 years experience in React, Node.js';
-    
-    setUploadingFiles(prev => ({ ...prev, [fileKey]: false }));
-    return mockExtractedData;
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, resultKey?: keyof OnboardingFormData['results']) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (resultKey) {
-      setFormData(prev => ({
-        ...prev,
-        results: {
-          ...prev.results,
-          [resultKey]: { ...prev.results[resultKey], file }
-        }
-      }));
-      
-      const extractedData = await processFile(file, resultKey);
-      setFormData(prev => ({
-        ...prev,
-        results: {
-          ...prev.results,
-          [resultKey]: { ...prev.results[resultKey], extractedData }
-        }
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, resume: file }));
-      await processFile(file);
-    }
-  };
+    const [skillInput, setSkillInput] = useState<string>('');
+    const [skillLevel, setSkillLevel] = useState<Skill['level']>('Beginner');
+    const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const skillInputRef = useRef<HTMLInputElement>(null);
+  
+    const totalSteps = 5;
+  
+    // ✅ Simplified file processing (removed dummy extracted data)
+    const processFile = async (file: File, resultKey?: string): Promise<void> => {
+      const fileKey = resultKey || 'resume';
+      setUploadingFiles(prev => ({ ...prev, [fileKey]: true }));
+  
+      // 👉 call your backend file-processing API here if needed
+      // For now, we just simulate upload completion without dummy data
+  
+      setUploadingFiles(prev => ({ ...prev, [fileKey]: false }));
+    };
+  
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, resultKey?: keyof OnboardingFormData['results']) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+  
+      if (resultKey) {
+        setFormData(prev => ({
+          ...prev,
+          results: { ...prev.results, [resultKey]: { ...prev.results[resultKey], file } }
+        }));
+        await processFile(file, resultKey);
+      } else {
+        setFormData(prev => ({ ...prev, resume: file }));
+        await processFile(file);
+      }
+    };
 
   const handleInputChange = (field: keyof OnboardingFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -201,22 +190,41 @@ const OnboardingForm: React.FC = () => {
       setCurrentStep(currentStep - 1);
     }
   };
+  const searchParams = useSearchParams();
+  const userId = searchParams.get("uid");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const handleSubmit = () => {
+    if (!userId) {
+      setError("User ID is missing");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
     try {
+        console.log(formData);
       const validatedData = OnboardingSchema.parse(formData);
-      console.log('Form submitted:', validatedData);
-      alert('Onboarding completed successfully!');
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const newErrors: Record<string, string> = {};
-        error?.errors?.forEach((err: any) => {
-          if (err.path.length > 0) {
-            newErrors[err.path.join('.')] = err.message;
-          }
-        });
-        setErrors(newErrors);
+      console.log(validatedData);
+
+      const response = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, updateData: validatedData }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update profile");
       }
+
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
   };
 
