@@ -1,4 +1,4 @@
-import { Client, Account, Databases } from "node-appwrite";
+import { Client, Account, Databases, Storage } from "node-appwrite";
 
 // Server-side Appwrite client with API key
 const serverClient = new Client()
@@ -8,4 +8,5 @@ const serverClient = new Client()
 
 export const serverAccount = new Account(serverClient);
 export const serverDatabases = new Databases(serverClient);
+export const serverStorage = new Storage(serverClient); // ✅ Added
 export { serverClient };
