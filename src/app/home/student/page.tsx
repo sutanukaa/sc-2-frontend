@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, Building, Award, TrendingUp, Clock, Bell, Search,
-  Plus, X, Save, Users, BarChart3, Settings, Briefcase, Shield, GraduationCap
+  Users, BarChart3, Settings, Briefcase, Shield, GraduationCap
 } from 'lucide-react';
 
 interface UserStats {
@@ -69,38 +69,12 @@ interface Post {
   };
 }
 
-interface UserRole {
-  role: 'user' | 'admin' | 'moderator';
-  permissions: {
-    canCreatePosts: boolean;
-    canDeletePosts: boolean;
-    canManageUsers: boolean;
-    canViewAnalytics: boolean;
-  };
-}
-
-
-interface CreatePostForm {
-  title: string;
-  content: string;
-  type: Post['type'];
-}
-
-const RoleBasedDashboard: React.FC = () => {
+const StudentDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [userOrgStatus, setUserOrgStatus] = useState<UserOrganizationStatus | null>(null);
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [isProcessingInvite, setIsProcessingInvite] = useState<boolean>(false);
-  const [showCreatePost, setShowCreatePost] = useState<boolean>(false);
-
-  
-  const [createPostForm, setCreatePostForm] = useState<CreatePostForm>({
-    title: '',
-    content: '',
-    type: 'announcement'
-  });
 
   const mockUserStats: UserStats = {
     name: "Dr. Priya Mehta",
@@ -115,28 +89,6 @@ const RoleBasedDashboard: React.FC = () => {
     appliedJobs: 0,
     interviewsScheduled: 0
   };
-
-  // Mock role data - Admin role
-  const mockUserRole: UserRole = {
-    role: 'admin',
-    permissions: {
-      canCreatePosts: true,
-      canDeletePosts: true,
-      canManageUsers: true,
-      canViewAnalytics: true
-    }
-  };
-
-  // For testing user role, uncomment this:
-  // const mockUserRole: UserRole = {
-  //   role: 'user',
-  //   permissions: {
-  //     canCreatePosts: false,
-  //     canDeletePosts: false,
-  //     canManageUsers: false,
-  //     canViewAnalytics: false
-  //   }
-  // };
 
   const mockUserOrgStatus: UserOrganizationStatus = {
     isPartOfOrg: true,
@@ -186,13 +138,6 @@ const RoleBasedDashboard: React.FC = () => {
     }
   ];
 
-  const postTypes: { value: Post['type']; label: string; icon: React.ReactNode; color: string }[] = [
-    { value: 'announcement', label: 'Announcement', icon: <Bell className="w-4 h-4" />, color: 'blue' },
-    { value: 'opportunity', label: 'Job Opportunity', icon: <Briefcase className="w-4 h-4" />, color: 'green' },
-    { value: 'update', label: 'Update', icon: <BarChart3 className="w-4 h-4" />, color: 'purple' },
-    { value: 'deadline', label: 'Deadline', icon: <Clock className="w-4 h-4" />, color: 'red' }
-  ];
-
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
@@ -200,7 +145,6 @@ const RoleBasedDashboard: React.FC = () => {
       
       setUserStats(mockUserStats);
       setUserOrgStatus(mockUserOrgStatus);
-      setUserRole(mockUserRole);
       setPosts(mockPosts);
       setIsLoading(false);
     };
@@ -244,45 +188,6 @@ const RoleBasedDashboard: React.FC = () => {
       setIsProcessingInvite(false);
     }
   };
-
-  const handleCreatePost = async () => {
-    if (!createPostForm.title.trim() || !createPostForm.content.trim()) {
-      alert('Please fill in required fields');
-      return;
-    }
-
-    try {
-      // Simulate API call to create post
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      const newPost: Post = {
-        id: `post-${Date.now()}`,
-        title: createPostForm.title,
-        content: createPostForm.content,
-        author: {
-          name: userStats?.name || "Admin",
-          role: "Admin",
-        },
-        timestamp: "Just now",
-        type: createPostForm.type
-      };
-
-      setPosts(prevPosts => [newPost, ...prevPosts]);
-      
-      // Reset form
-      setCreatePostForm({
-        title: '',
-        content: '',
-        type: 'announcement'
-      });
-      
-      setShowCreatePost(false);
-    } catch (error) {
-      console.error('Failed to create post:', error);
-    }
-  };
-
-
 
   const getPostTypeColor = (type: Post['type']) => {
     switch (type) {
@@ -353,85 +258,6 @@ const RoleBasedDashboard: React.FC = () => {
     </div>
   );
 
-  const CreatePostModal = () => (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-xl border border-gray-800 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-800">
-          <h2 className="text-xl font-bold text-white">Create New Post</h2>
-          <button
-            onClick={() => setShowCreatePost(false)}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-6 space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-3">Post Type</label>
-            <div className="grid grid-cols-2 gap-3">
-              {postTypes.map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => setCreatePostForm(prev => ({ ...prev, type: type.value }))}
-                  className={`p-3 rounded-lg border transition-colors flex items-center gap-2 ${
-                    createPostForm.type === type.value
-                      ? `bg-${type.color}-500/20 border-${type.color}-500/30 text-${type.color}-400`
-                      : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
-                  }`}
-                >
-                  {type.icon}
-                  <span>{type.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Title *</label>
-            <input
-              type="text"
-              value={createPostForm.title}
-              onChange={(e) => setCreatePostForm(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="Enter post title..."
-              className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Content *</label>
-            <textarea
-              value={createPostForm.content}
-              onChange={(e) => setCreatePostForm(prev => ({ ...prev, content: e.target.value }))}
-              placeholder="Enter post content..."
-              rows={5}
-              className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none resize-vertical"
-            />
-
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-gray-800">
-            <button
-              onClick={() => setShowCreatePost(false)}
-              className="flex-1 p-3 bg-gray-800 border border-gray-600 text-white rounded-lg hover:border-gray-500 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleCreatePost}
-              disabled={!createPostForm.title.trim() || !createPostForm.content.trim()}
-              className="flex-1 p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-600/50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              Create Post
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="absolute inset-0 h-full w-full bg-transparent opacity-5 bg-[linear-gradient(to_right,#f0f0f0_1px,transparent_1px),linear-gradient(to_bottom,#f0f0f0_1px,transparent_1px)] bg-[size:6rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]"></div>
@@ -444,12 +270,6 @@ const RoleBasedDashboard: React.FC = () => {
                 <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
                   Campus Placement
                 </h1>
-                {userRole?.role === 'admin' && (
-                  <div className="flex items-center gap-2 px-3 py-1 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-full">
-                    <Shield className="w-4 h-4" />
-                    <span className="text-xs font-medium">Admin</span>
-                  </div>
-                )}
                 {userOrgStatus?.isPartOfOrg && userOrgStatus.organization && (
                   <div className="flex items-center gap-2 text-gray-400">
                     <span className="text-2xl">{userOrgStatus.organization.logo}</span>
@@ -469,15 +289,6 @@ const RoleBasedDashboard: React.FC = () => {
                 )}
               </div>
               <div className="flex items-center gap-4">
-                {userRole?.permissions.canCreatePosts && (
-                  <button
-                    onClick={() => setShowCreatePost(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Create Post
-                  </button>
-                )}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
@@ -576,7 +387,6 @@ const RoleBasedDashboard: React.FC = () => {
                           <div className="space-y-4">
                             <div>
                               <h3 className="text-lg font-semibold text-white mb-2">{post.title}</h3>
-                              {/* <p className="text-gray-300 mb-3">{post.description}</p> */}
                               <p className="text-gray-400 text-sm">{post.content}</p>
                             </div>
 
@@ -771,27 +581,25 @@ const RoleBasedDashboard: React.FC = () => {
                         <span className="text-white text-sm font-medium">{userStats.activeBacklogs}</span>
                       </div>
 
-                      {userRole?.role !== 'admin' && (
-                        <div className="pt-4 border-t border-gray-800">
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="text-sm text-gray-400">Status</span>
-                            <span className={`px-2 py-1 rounded-full text-xs border capitalize ${getStatusColor(userStats.placementStatus)}`}>
-                              {userStats.placementStatus}
-                            </span>
-                          </div>
+                      <div className="pt-4 border-t border-gray-800">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm text-gray-400">Status</span>
+                          <span className={`px-2 py-1 rounded-full text-xs border capitalize ${getStatusColor(userStats.placementStatus)}`}>
+                            {userStats.placementStatus}
+                          </span>
+                        </div>
 
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-white">{userStats.appliedJobs}</div>
-                              <div className="text-xs text-gray-400">Applied Jobs</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-white">{userStats.interviewsScheduled}</div>
-                              <div className="text-xs text-gray-400">Interviews</div>
-                            </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="text-center">
+                            <div className="text-lg font-bold text-white">{userStats.appliedJobs}</div>
+                            <div className="text-xs text-gray-400">Applied Jobs</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-lg font-bold text-white">{userStats.interviewsScheduled}</div>
+                            <div className="text-xs text-gray-400">Interviews</div>
                           </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 )
@@ -821,40 +629,8 @@ const RoleBasedDashboard: React.FC = () => {
                 </div>
               )}
 
-              {/* Admin Controls */}
-              {!isLoading && userRole?.role === 'admin' && (
-                <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-                  <h3 className="font-semibold text-white mb-4">Admin Controls</h3>
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => setShowCreatePost(true)}
-                      className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Create New Post
-                    </button>
-                    {userRole.permissions.canViewAnalytics && (
-                      <button className="w-full p-3 bg-gray-800 border border-gray-600 text-white rounded-lg hover:border-gray-500 transition-colors text-sm flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4" />
-                        View Analytics
-                      </button>
-                    )}
-                    {userRole.permissions.canManageUsers && (
-                      <button className="w-full p-3 bg-gray-800 border border-gray-600 text-white rounded-lg hover:border-gray-500 transition-colors text-sm flex items-center gap-2">
-                        <Users className="w-4 h-4" />
-                        Manage Users
-                      </button>
-                    )}
-                    <button className="w-full p-3 bg-gray-800 border border-gray-600 text-white rounded-lg hover:border-gray-500 transition-colors text-sm flex items-center gap-2">
-                      <Settings className="w-4 h-4" />
-                      Settings
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Quick Actions for non-admin users */}
-              {!isLoading && userRole?.role !== 'admin' && (
+              {/* Quick Actions for users */}
+              {!isLoading && (
                 <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
                   <h3 className="font-semibold text-white mb-4">Quick Actions</h3>
                   <div className="space-y-3">
@@ -904,11 +680,8 @@ const RoleBasedDashboard: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Create Post Modal */}
-      {showCreatePost && <CreatePostModal />}
     </div>
   );
 };
 
-export default RoleBasedDashboard;
+export default StudentDashboard;
