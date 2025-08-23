@@ -1,5 +1,5 @@
 // app/api/posts/route.ts
-import { createPost } from "@/collections/post";
+import { createPost, getAllPosts } from "@/collections/post";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -47,6 +47,18 @@ export async function POST(req: Request) {
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Something went wrong" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET() {
+  try {
+    const posts = await getAllPosts();
+    return NextResponse.json(posts, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Failed to fetch posts" },
       { status: 500 }
     );
   }

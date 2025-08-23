@@ -1,6 +1,6 @@
 // lib/post.ts
 import { databases } from "@/lib/appwrite";
-import { ID } from "appwrite";
+import { ID, Query } from "appwrite";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
 const POSTS_COLLECTION_ID =
@@ -30,3 +30,20 @@ export async function createPost(data: {
   );
   return post;
 }
+
+export async function getPost(postId: string) {
+  const post = await databases.getDocument(
+    DATABASE_ID,
+    POSTS_COLLECTION_ID,
+    postId
+  );
+  return post;
+}
+
+export async function getAllPosts() {
+  const response = await databases.listDocuments(DATABASE_ID, POSTS_COLLECTION_ID, [
+    Query.orderDesc("$createdAt"),
+  ]);
+  return response;
+}
+  

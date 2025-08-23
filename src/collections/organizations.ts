@@ -15,7 +15,7 @@ export interface OrganizationData {
   updatedAt?: string;
 }
 
-export const userDB = {
+export const orgDB = {
   get: async (id: string): Promise<OrganizationData> => {
     try {
       const doc = await databases.getDocument<OrganizationData | any>(

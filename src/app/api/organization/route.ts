@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { databases } from "@/lib/appwrite";
 import { ID } from "appwrite";
+import { orgDB } from "@/collections/organizations";
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID!;
 const COLLECTION_ID =
@@ -31,5 +32,14 @@ export async function POST(req: Request) {
       { error: error.message || "Something went wrong" },
       { status: 500 }
     );
+  }
+}
+
+export async function GET() {
+  try {
+    const orgs = await orgDB.list();
+    return NextResponse.json(orgs, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
