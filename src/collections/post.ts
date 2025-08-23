@@ -9,6 +9,7 @@ const POSTS_COLLECTION_ID =
 export async function createPost(data: {
   title: string;
   content: string;
+  summary?: string; // Add summary field
   company?: string;
   website?: string;
   registration_link?: string;
@@ -30,7 +31,6 @@ export async function createPost(data: {
   };
   author: {
     name: string;
-    role: string;
     avatar?: string;
   };
   responsibilities?: string[];

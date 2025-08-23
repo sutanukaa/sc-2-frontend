@@ -653,7 +653,6 @@ const RoleBasedDashboard: React.FC = () => {
                                   </div>
                                   <div>
                                     <p className="text-white text-sm font-medium">{post.author.name}</p>
-                                    <p className="text-gray-400 text-xs">{post.author.role}</p>
                                   </div>
                                 </div>
                               </div>
