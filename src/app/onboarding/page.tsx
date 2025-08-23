@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useRef, KeyboardEvent } from 'react';
+import React, { useState, useRef } from 'react';
 import { ChevronRight, ChevronLeft, Upload, X, CheckCircle, User, GraduationCap, FileText, Award, Calendar, MapPin, Phone, Mail, Building } from 'lucide-react';
 import { z } from 'zod';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -9,41 +9,34 @@ const FileSchema = z.object({
   extractedData: z.string()
 });
 
-const SkillSchema = z.object({
-  name: z.string().min(1, "Skill name is required"),
-  level: z.enum(["Beginner", "Intermediate", "Advanced", "Expert"])
-});
-
 const OnboardingSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  gender: z.enum(["male", "female"]).optional(),
-  course: z.string().min(1, "Course is required"),
-  stream: z.string().min(1, "Stream is required"),
-  batch: z.string().min(4, "Batch must be valid year"),
-  institute: z.string().min(1, "Institute is required"),
+  gender: z.enum(["MALE", "FEMALE", "OTHER"]).optional(),
+  course: z.string().optional(),
+  stream: z.string().optional(),
+  batch: z.string().optional(),
+  institute: z.string().optional(),
   email: z.string().email("Invalid email address"),
-  phone: z.string().min(10, "Phone must be at least 10 digits"),
-  address: z.string().min(1, "Address is required"),
-  dob: z.string().min(1, "Date of birth is required"),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  dob: z.string().optional(),
   active_backlog: z.number().min(0).default(0),
-  resume: z.any().nullable(),
-  results: z.object({
-    '10th': FileSchema,
-    '12th': FileSchema,
-    'sem1': FileSchema,
-    'sem2': FileSchema,
-    'sem3': FileSchema,
-    'sem4': FileSchema,
-    'sem5': FileSchema,
-    'sem6': FileSchema,
-    'sem7': FileSchema,
-  }),
-  skills: z.array(SkillSchema)
+  resume_file_id: z.string().optional(),
+  isCompleted: z.boolean().default(false),
+  invite: z.array(z.string()).default([]),
+  updatedAt: z.string().optional(),
+  '10th': z.number().optional(),
+  '12th': z.number().optional(),
+  sem1: z.number().optional(),
+  sem2: z.number().optional(),
+  sem3: z.number().optional(),
+  sem4: z.number().optional(),
+  sem5: z.number().optional(),
+  sem6: z.number().optional()
 });
 
 type OnboardingFormData = z.infer<typeof OnboardingSchema>;
 type FileData = z.infer<typeof FileSchema>;
-type Skill = z.infer<typeof SkillSchema>;
 
 const OnboardingForm: React.FC = () => {
     const router = useRouter();
@@ -54,8 +47,7 @@ const OnboardingForm: React.FC = () => {
         { id: 1, title: 'Personal Info', icon: User },
         { id: 2, title: 'Academic Details', icon: GraduationCap },
         { id: 3, title: 'Resume Upload', icon: FileText },
-        { id: 4, title: 'Academic Results', icon: Award },
-        { id: 5, title: 'Skills & Expertise', icon: CheckCircle }
+        { id: 4, title: 'Academic Results', icon: Award }
       ];
     const [formData, setFormData] = useState<OnboardingFormData>({
       name: '',
@@ -69,53 +61,107 @@ const OnboardingForm: React.FC = () => {
       address: '',
       dob: '',
       active_backlog: 0,
-      resume: null,
-      results: {
-        '10th': { file: null, extractedData: '' },
-        '12th': { file: null, extractedData: '' },
-        'sem1': { file: null, extractedData: '' },
-        'sem2': { file: null, extractedData: '' },
-        'sem3': { file: null, extractedData: '' },
-        'sem4': { file: null, extractedData: '' },
-        'sem5': { file: null, extractedData: '' },
-        'sem6': { file: null, extractedData: '' },
-        'sem7': { file: null, extractedData: '' },
-      },
-      skills: []
+      resume_file_id: undefined,
+      isCompleted: false,
+      invite: [],
+      updatedAt: undefined,
+      '10th': undefined,
+      '12th': undefined,
+      sem1: undefined,
+      sem2: undefined,
+      sem3: undefined,
+      sem4: undefined,
+      sem5: undefined,
+      sem6: undefined
     });
   
-    const [skillInput, setSkillInput] = useState<string>('');
-    const [skillLevel, setSkillLevel] = useState<Skill['level']>('Beginner');
     const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const skillInputRef = useRef<HTMLInputElement>(null);
-  
-    const totalSteps = 5;
-  
-    // ✅ Simplified file processing (removed dummy extracted data)
-    const processFile = async (file: File, resultKey?: string): Promise<void> => {
-      const fileKey = resultKey || 'resume';
-      setUploadingFiles(prev => ({ ...prev, [fileKey]: true }));
-  
-      // 👉 call your backend file-processing API here if needed
-      // For now, we just simulate upload completion without dummy data
-  
-      setUploadingFiles(prev => ({ ...prev, [fileKey]: false }));
+    const [uploadedFiles, setUploadedFiles] = useState<Record<string, {file: File, fileId?: string}>>({});
+
+    const totalSteps = 4;
+
+    // Calculate active backlogs based on semesters with GPA = 0
+    const calculateActiveBacklogs = (): number => {
+      const semesterGPAs = [formData.sem1, formData.sem2, formData.sem3, formData.sem4, formData.sem5, formData.sem6];
+      return semesterGPAs.filter(gpa => gpa === 0).length;
     };
-  
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, resultKey?: keyof OnboardingFormData['results']) => {
+
+    // Upload file to bucket and return file ID
+    const uploadFileToBucket = async (file: File, fileKey: string): Promise<string> => {
+      setUploadingFiles(prev => ({ ...prev, [fileKey]: true }));
+      
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('fileKey', fileKey);
+        
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error('File upload failed');
+        }
+        
+        const result = await response.json();
+        return result.fileId;
+      } finally {
+        setUploadingFiles(prev => ({ ...prev, [fileKey]: false }));
+      }
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fileKey: string = 'resume') => {
       const file = e.target.files?.[0];
       if (!file) return;
-  
-      if (resultKey) {
-        setFormData(prev => ({
-          ...prev,
-          results: { ...prev.results, [resultKey]: { ...prev.results[resultKey], file } }
+
+      try {
+        // Store file locally first
+        setUploadedFiles(prev => ({ 
+          ...prev, 
+          [fileKey]: { file } 
         }));
-        await processFile(file, resultKey);
-      } else {
-        setFormData(prev => ({ ...prev, resume: file }));
-        await processFile(file);
+
+        // For resume, immediately upload and get file ID
+        if (fileKey === 'resume') {
+          const fileId = await uploadFileToBucket(file, fileKey);
+          setUploadedFiles(prev => ({ 
+            ...prev, 
+            [fileKey]: { file, fileId } 
+          }));
+          setFormData(prev => ({ ...prev, resume_file_id: fileId }));
+        }
+        
+        // Clear any existing errors for this field
+        if (errors[fileKey]) {
+          setErrors(prev => ({ ...prev, [fileKey]: '' }));
+        }
+      } catch (error) {
+        console.error('File upload failed:', error);
+        setErrors(prev => ({ ...prev, [fileKey]: 'File upload failed. Please try again.' }));
+      }
+    };
+
+    // Upload all academic result files
+    const uploadAllAcademicFiles = async (): Promise<boolean> => {
+      const academicKeys = ['10th', '12th', 'sem1', 'sem2', 'sem3', 'sem4', 'sem5', 'sem6'];
+      
+      try {
+        for (const key of academicKeys) {
+          const fileData = uploadedFiles[key];
+          if (fileData && fileData.file && !fileData.fileId) {
+            const fileId = await uploadFileToBucket(fileData.file, key);
+            setUploadedFiles(prev => ({
+              ...prev,
+              [key]: { ...prev[key], fileId }
+            }));
+          }
+        }
+        return true;
+      } catch (error) {
+        console.error('Academic files upload failed:', error);
+        return false;
       }
     };
 
@@ -126,32 +172,6 @@ const OnboardingForm: React.FC = () => {
     }
   };
 
-  const handleSkillKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Tab' && skillInput.trim()) {
-      e.preventDefault();
-      addSkillChip();
-    }
-  };
-
-  const addSkillChip = () => {
-    if (skillInput.trim() && !formData.skills.some(skill => skill.name.toLowerCase() === skillInput.trim().toLowerCase())) {
-      const newSkill: Skill = { name: skillInput.trim(), level: skillLevel };
-      setFormData(prev => ({
-        ...prev,
-        skills: [...prev.skills, newSkill]
-      }));
-      setSkillInput('');
-      skillInputRef.current?.focus();
-    }
-  };
-
-  const handleRemoveSkill = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      skills: prev.skills.filter((_, i) => i !== index)
-    }));
-  };
-
   const validateCurrentStep = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -160,18 +180,15 @@ const OnboardingForm: React.FC = () => {
         if (!formData.name.trim()) newErrors.name = 'Name is required';
         if (!formData.email.trim()) newErrors.email = 'Email is required';
         else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email format';
-        if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
-        if (!formData.address.trim()) newErrors.address = 'Address is required';
-        if (!formData.dob) newErrors.dob = 'Date of birth is required';
         break;
       case 2:
-        if (!formData.course.trim()) newErrors.course = 'Course is required';
-        if (!formData.stream.trim()) newErrors.stream = 'Stream is required';
-        if (!formData.batch.trim()) newErrors.batch = 'Batch is required';
-        if (!formData.institute.trim()) newErrors.institute = 'Institute is required';
+        // All academic fields are optional, so no validation needed
         break;
       case 3:
-        if (!formData.resume) newErrors.resume = 'Resume is required';
+        if (!formData.resume_file_id) newErrors.resume_file_id = 'Resume is required';
+        break;
+      case 4:
+        // Academic results are optional
         break;
     }
 
@@ -190,11 +207,11 @@ const OnboardingForm: React.FC = () => {
       setCurrentStep(currentStep - 1);
     }
   };
+
   const searchParams = useSearchParams();
   const userId = searchParams.get("uid");
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
 
+  const handleFinalSubmit = async () => {
     if (!userId) {
       setError("User ID is missing");
       return;
@@ -204,14 +221,42 @@ const OnboardingForm: React.FC = () => {
     setError(null);
 
     try {
-        console.log(formData);
-      const validatedData = OnboardingSchema.parse(formData);
-      console.log(validatedData);
+      // First, upload all academic files
+      const uploadSuccess = await uploadAllAcademicFiles();
+      if (!uploadSuccess) {
+        throw new Error("Academic files upload failed. Please try again.");
+      }
+
+      // Calculate active backlogs based on semesters with GPA = 0
+      const activeBacklogs = calculateActiveBacklogs();
+      
+      // Prepare final form data
+      const finalFormData = {
+        ...formData,
+        active_backlog: activeBacklogs,
+        isCompleted: true,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Validate the final data
+      const validatedData = OnboardingSchema.parse(finalFormData);
+
+      // Create FormData for the API call
+      const apiFormData = new FormData();
+      apiFormData.append('userId', userId);
+      
+      // Add the resume file if it exists
+      const resumeData = uploadedFiles['resume'];
+      if (resumeData?.file) {
+        apiFormData.append('resume', resumeData.file);
+      }
+
+      // Add other form data as JSON
+      apiFormData.append('updateData', JSON.stringify(validatedData));
 
       const response = await fetch("/api/onboarding", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, updateData: validatedData }),
+        body: apiFormData,
       });
 
       const result = await response.json();
@@ -222,6 +267,7 @@ const OnboardingForm: React.FC = () => {
 
       router.push("/dashboard");
     } catch (err: any) {
+      console.error('Submission error:', err);
       setError(err.message || "Something went wrong");
     } finally {
       setLoading(false);
@@ -249,12 +295,13 @@ const OnboardingForm: React.FC = () => {
           <label className="block text-sm font-medium text-gray-300 mb-2">Gender</label>
           <select
             value={formData.gender || ''}
-            onChange={(e) => handleInputChange('gender', e.target.value as 'male' | 'female' | undefined)}
+            onChange={(e) => handleInputChange('gender', e.target.value as 'MALE' | 'FEMALE' | 'OTHER' | undefined)}
             className="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white focus:border-blue-500 focus:outline-none transition-colors"
           >
             <option value="">Select Gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+            <option value="OTHER">Other</option>
           </select>
         </div>
 
@@ -273,10 +320,10 @@ const OnboardingForm: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Phone *</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Phone</label>
           <input
             type="tel"
-            value={formData.phone}
+            value={formData.phone || ''}
             onChange={(e) => handleInputChange('phone', e.target.value)}
             className={`w-full p-3 rounded-lg bg-gray-800 border text-white focus:outline-none transition-colors ${
               errors.phone ? 'border-red-500 focus:border-red-500' : 'border-gray-600 focus:border-blue-500'
@@ -287,10 +334,10 @@ const OnboardingForm: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Date of Birth *</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Date of Birth</label>
           <input
             type="date"
-            value={formData.dob}
+            value={formData.dob || ''}
             onChange={(e) => handleInputChange('dob', e.target.value)}
             className={`w-full p-3 rounded-lg bg-gray-800 border text-white focus:outline-none transition-colors ${
               errors.dob ? 'border-red-500 focus:border-red-500' : 'border-gray-600 focus:border-blue-500'
@@ -300,9 +347,9 @@ const OnboardingForm: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Address *</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Address</label>
           <textarea
-            value={formData.address}
+            value={formData.address || ''}
             onChange={(e) => handleInputChange('address', e.target.value)}
             rows={3}
             className={`w-full p-3 rounded-lg bg-gray-800 border text-white focus:outline-none transition-colors resize-none ${
@@ -320,10 +367,10 @@ const OnboardingForm: React.FC = () => {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Course *</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Course</label>
           <input
             type="text"
-            value={formData.course}
+            value={formData.course || ''}
             onChange={(e) => handleInputChange('course', e.target.value)}
             className={`w-full p-3 rounded-lg bg-gray-800 border text-white focus:outline-none transition-colors ${
               errors.course ? 'border-red-500 focus:border-red-500' : 'border-gray-600 focus:border-blue-500'
@@ -334,10 +381,10 @@ const OnboardingForm: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Stream *</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Stream</label>
           <input
             type="text"
-            value={formData.stream}
+            value={formData.stream || ''}
             onChange={(e) => handleInputChange('stream', e.target.value)}
             className={`w-full p-3 rounded-lg bg-gray-800 border text-white focus:outline-none transition-colors ${
               errors.stream ? 'border-red-500 focus:border-red-500' : 'border-gray-600 focus:border-blue-500'
@@ -348,10 +395,10 @@ const OnboardingForm: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Batch *</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Batch</label>
           <input
             type="text"
-            value={formData.batch}
+            value={formData.batch || ''}
             onChange={(e) => handleInputChange('batch', e.target.value)}
             className={`w-full p-3 rounded-lg bg-gray-800 border text-white focus:outline-none transition-colors ${
               errors.batch ? 'border-red-500 focus:border-red-500' : 'border-gray-600 focus:border-blue-500'
@@ -362,10 +409,10 @@ const OnboardingForm: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Institute *</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Institute</label>
           <input
             type="text"
-            value={formData.institute}
+            value={formData.institute || ''}
             onChange={(e) => handleInputChange('institute', e.target.value)}
             className={`w-full p-3 rounded-lg bg-gray-800 border text-white focus:outline-none transition-colors ${
               errors.institute ? 'border-red-500 focus:border-red-500' : 'border-gray-600 focus:border-blue-500'
@@ -373,18 +420,6 @@ const OnboardingForm: React.FC = () => {
             placeholder="e.g., Indian Institute of Technology"
           />
           {errors.institute && <p className="text-red-400 text-sm mt-1">{errors.institute}</p>}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Active Backlogs</label>
-          <input
-            type="number"
-            value={formData.active_backlog}
-            onChange={(e) => handleInputChange('active_backlog', parseInt(e.target.value) || 0)}
-            className="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white focus:border-blue-500 focus:outline-none transition-colors"
-            placeholder="0"
-            min="0"
-          />
         </div>
       </div>
     </div>
@@ -394,27 +429,33 @@ const OnboardingForm: React.FC = () => {
     <div className="space-y-6">
       <div className="text-center">
         <div className={`border-2 border-dashed rounded-lg p-8 ${
-          errors.resume ? 'border-red-500' : 'border-gray-600'
+          errors.resume_file_id ? 'border-red-500' : 'border-gray-600'
         }`}>
           <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <div className="text-lg font-medium text-gray-300 mb-2">Upload your Resume *</div>
           <div className="text-sm text-gray-500 mb-4">PDF, DOC, or DOCX files only (Max 5MB)</div>
-          <label className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
-            <Upload className="w-5 h-5 mr-2" />
-            Choose File
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx"
-              onChange={(e) => handleFileUpload(e)}
-              className="hidden"
-            />
-          </label>
-          {formData.resume && (
+          
+          {uploadingFiles.resume ? (
+            <div className="text-blue-400 text-sm">Uploading resume...</div>
+          ) : (
+            <label className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+              <Upload className="w-5 h-5 mr-2" />
+              Choose File
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => handleFileUpload(e, 'resume')}
+                className="hidden"
+              />
+            </label>
+          )}
+          
+          {uploadedFiles.resume && (
             <div className="mt-4 text-sm text-green-400">
-              ✓ {(formData.resume as File).name} uploaded successfully
+              ✓ {uploadedFiles.resume.file.name} uploaded successfully
             </div>
           )}
-          {errors.resume && <p className="text-red-400 text-sm mt-2">{errors.resume}</p>}
+          {errors.resume_file_id && <p className="text-red-400 text-sm mt-2">{errors.resume_file_id}</p>}
         </div>
       </div>
     </div>
@@ -422,117 +463,90 @@ const OnboardingForm: React.FC = () => {
 
   const renderAcademicResults = () => (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h3 className="text-lg font-medium text-gray-300 mb-2">Upload Academic Results</h3>
-        <p className="text-sm text-gray-500">Upload your academic transcripts and mark sheets</p>
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-white mb-2">Academic Results</h3>
+        <p className="text-gray-400 text-sm">Enter your GPA for each semester. GPA of 0 indicates a backlog.</p>
+      </div>
+
+      {/* Active Backlogs Display */}
+      <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-yellow-400">Active Backlogs:</span>
+          <span className="text-lg font-bold text-yellow-400">{calculateActiveBacklogs()}</span>
+        </div>
+        <p className="text-xs text-yellow-400 mt-1">
+          Calculated from semesters with GPA = 0
+        </p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Object.entries(formData.results).map(([key, value]) => (
+        {(['10th', '12th', 'sem1', 'sem2', 'sem3', 'sem4', 'sem5', 'sem6'] as const).map((key) => (
           <div key={key} className="space-y-2">
             <label className="block text-sm font-medium text-gray-300 capitalize">
-              {key === '10th' ? '10th Standard' : key === '12th' ? '12th Standard' : `Semester ${key.slice(-1)}`}
+              {key === '10th' ? '10th Standard' : key === '12th' ? '12th Standard' : `${key.toUpperCase()} Semester`}
             </label>
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <div className="flex-1">
-                <label className="flex items-center justify-center p-3 border-2 border-dashed border-gray-600 rounded-lg hover:border-gray-500 transition-colors cursor-pointer">
-                  <Upload className="w-4 h-4 mr-2 text-gray-400" />
-                  <span className="text-sm text-gray-400">
-                    {value.file ? (value.file as File).name : 'Choose file'}
-                  </span>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => handleFileUpload(e, key as keyof OnboardingFormData['results'])}
-                    className="hidden"
-                  />
-                </label>
+                <div className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                  uploadingFiles[key] ? 'border-blue-500 bg-blue-500/10' : 
+                  uploadedFiles[key] ? 'border-green-500 bg-green-500/10' : 
+                  'border-gray-600 hover:border-gray-500'
+                }`}>
+                  {uploadingFiles[key] ? (
+                    <div className="text-blue-400 text-sm">Uploading...</div>
+                  ) : uploadedFiles[key] ? (
+                    <div className="text-green-400 text-sm">✓ Uploaded</div>
+                  ) : (
+                    <label className="cursor-pointer flex items-center justify-center">
+                      <Upload className="w-4 h-4 mr-2 text-gray-400" />
+                      <span className="text-sm text-gray-400">Choose file</span>
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => handleFileUpload(e, key)}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
               <div className="flex-1">
                 <input
-                  type="text"
-                  value={value.extractedData}
-                  readOnly
-                  placeholder={uploadingFiles[key] ? 'Processing...' : 'Extracted data will appear here'}
-                  className="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white focus:outline-none"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="10"
+                  value={formData[key] || ''}
+                  onChange={(e) => handleInputChange(key, parseFloat(e.target.value) || undefined)}
+                  className="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white focus:border-blue-500 focus:outline-none transition-colors"
+                  placeholder="Enter GPA (0-10)"
                 />
               </div>
             </div>
-            {uploadingFiles[key] && (
-              <div className="text-sm text-blue-400 flex items-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400 mr-2"></div>
-                Processing file...
-              </div>
-            )}
           </div>
         ))}
       </div>
-    </div>
-  );
 
-  const renderSkills = () => (
-    <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h3 className="text-lg font-medium text-gray-300 mb-2">Add Your Skills</h3>
-        <p className="text-sm text-gray-500">Type skills and press Tab to add them as chips</p>
-      </div>
-
-      <div className="flex gap-3 mb-4">
-        <div className="flex-1">
-          <input
-            ref={skillInputRef}
-            type="text"
-            value={skillInput}
-            onChange={(e) => setSkillInput(e.target.value)}
-            onKeyDown={handleSkillKeyDown}
-            placeholder="Type skill name and press Tab (e.g., JavaScript, Python)"
-            className="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white focus:border-blue-500 focus:outline-none transition-colors"
-          />
-        </div>
-        <div className="w-32">
-          <select
-            value={skillLevel}
-            onChange={(e) => setSkillLevel(e.target.value as Skill['level'])}
-            className="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white focus:border-blue-500 focus:outline-none transition-colors"
-          >
-            <option value="Beginner">Beginner</option>
-            <option value="Intermediate">Intermediate</option>
-            <option value="Advanced">Advanced</option>
-            <option value="Expert">Expert</option>
-          </select>
-        </div>
+      {/* Final Submit Button - Only shown on last step */}
+      <div className="mt-8 pt-6 border-t border-gray-700">
+        {error && (
+          <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
+        
         <button
-          onClick={addSkillChip}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          onClick={handleFinalSubmit}
+          disabled={loading}
+          className={`w-full p-4 rounded-lg font-medium transition-colors ${
+            loading
+              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700'
+          }`}
         >
-          Add
+          {loading ? 'Submitting Application...' : 'Submit Application'}
         </button>
       </div>
-
-      {formData.skills.length > 0 && (
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium text-gray-300">Skills Added:</h4>
-          <div className="flex flex-wrap gap-2">
-            {formData.skills.map((skill, index) => (
-              <div
-                key={index}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-full text-sm"
-              >
-                <span className="text-white font-medium">{skill.name}</span>
-                <span className="text-xs text-gray-300 bg-gray-700/50 px-2 py-0.5 rounded-full">
-                  {skill.level}
-                </span>
-                <button
-                  onClick={() => handleRemoveSkill(index)}
-                  className="text-red-400 hover:text-red-300 transition-colors ml-1"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 
@@ -542,7 +556,6 @@ const OnboardingForm: React.FC = () => {
       case 2: return renderAcademicDetails();
       case 3: return renderResumeUpload();
       case 4: return renderAcademicResults();
-      case 5: return renderSkills();
       default: return renderPersonalInfo();
     }
   };
@@ -608,38 +621,47 @@ const OnboardingForm: React.FC = () => {
 
           {renderCurrentStep()}
 
-          <div className="flex justify-between mt-8">
-            <button
-              onClick={prevStep}
-              disabled={currentStep === 1}
-              className={`flex items-center px-6 py-3 rounded-lg transition-colors ${
-                currentStep === 1 
-                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed' 
-                  : 'bg-gray-700 text-white hover:bg-gray-600'
-              }`}
-            >
-              <ChevronLeft className="w-5 h-5 mr-2" />
-              Previous
-            </button>
-
-            {currentStep === totalSteps ? (
+          {/* Navigation buttons - only show if not on last step */}
+          {currentStep < totalSteps && (
+            <div className="flex justify-between mt-8">
               <button
-                onClick={handleSubmit}
-                className="flex items-center px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-colors"
+                type="button"
+                onClick={prevStep}
+                disabled={currentStep === 1}
+                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+                  currentStep === 1
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-700 text-white hover:bg-gray-600'
+                }`}
               >
-                Complete Onboarding
-                <CheckCircle className="w-5 h-5 ml-2" />
+                <ChevronLeft className="w-4 h-4" />
+                Previous
               </button>
-            ) : (
+
               <button
+                type="button"
                 onClick={nextStep}
-                className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-colors"
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 transition-colors"
               >
                 Next
-                <ChevronRight className="w-5 h-5 ml-2" />
+                <ChevronRight className="w-4 h-4" />
               </button>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Previous button for last step */}
+          {currentStep === totalSteps && (
+            <div className="flex justify-start mt-8">
+              <button
+                type="button"
+                onClick={prevStep}
+                className="flex items-center gap-2 px-6 py-3 bg-gray-700 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
