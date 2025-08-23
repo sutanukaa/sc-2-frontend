@@ -6,20 +6,31 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const {
-      org_id,
-      created_by,
-      company_name,
+      title,
+      content,
+      company,
+      website,
+      registration_link,
       role,
-      description,
+      ctc,
+      type,
       criteria,
-      duration,
-      summarisation,
-      mail_attachment_ref,
-      attachment_1_desc,
-      attachment_2_desc,
+      author,
+      responsibilities,
+      benefits,
+      applicationProcess,
+      eligibility,
+      timestamp,
     } = body;
 
-    if (!org_id || !created_by || !company_name || !role || !description) {
+    if (
+      !title ||
+      !content ||
+      !type ||
+      !author?.name ||
+      !author?.role ||
+      !timestamp
+    ) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -27,17 +38,21 @@ export async function POST(req: Request) {
     }
 
     const post = await createPost({
-      org_id,
-      created_by,
-      company_name,
+      title,
+      content,
+      company,
+      website,
+      registration_link,
       role,
-      description,
+      ctc,
+      type,
       criteria,
-      duration,
-      summarisation,
-      mail_attachment_ref,
-      attachment_1_desc,
-      attachment_2_desc,
+      author,
+      responsibilities,
+      benefits,
+      applicationProcess,
+      eligibility,
+      timestamp,
     });
 
     return NextResponse.json({
