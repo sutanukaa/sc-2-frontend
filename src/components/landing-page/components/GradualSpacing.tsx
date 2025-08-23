@@ -1,7 +1,4 @@
-"use client";
-
-import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import React from "react";
 
 interface GradualSpacingProps {
   text: string;
@@ -12,29 +9,26 @@ interface GradualSpacingProps {
 
 export default function GradualSpacing({
   text,
-  className,
-  textClassName,
+  className = "",
+  textClassName = "",
   visibility = true,
 }: GradualSpacingProps) {
-  const letters = text.split("");
-  
   return (
-    <div className={cn("flex", textClassName)}>
-      {letters.map((letter, index) => (
-        <motion.span
-          key={index}
-          initial={{ opacity: 0, y: 20 }}
-          animate={visibility ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-          transition={{
-            delay: index * 0.05,
-            duration: 0.5,
-            ease: "easeOut",
-          }}
-          className={cn("inline-block", className)}
-        >
-          {letter === " " ? "\u00A0" : letter}
-        </motion.span>
-      ))}
+    <div className={className}>
+      <div className={textClassName}>
+        {text.split(" ").map((word, i) => (
+          <span
+            key={i}
+            className={
+              "inline-block transition-all duration-700" +
+              (visibility ? " opacity-100 translate-y-0" : " opacity-0 translate-y-8")
+            }
+            style={{ transitionDelay: `${i * 80}ms` }}
+          >
+            {word}&nbsp;
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
