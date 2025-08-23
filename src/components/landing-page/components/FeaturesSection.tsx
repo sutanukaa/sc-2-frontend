@@ -24,9 +24,13 @@ const features = [
   }
 ];
 
-export default function FeaturesSection() {
+interface FeaturesSectionProps {
+  id?: string;
+}
+
+export default function FeaturesSection({ id }: FeaturesSectionProps) {
   return (
-    <section className="py-20 bg-zinc-900 text-white transition-colors duration-500">
+    <section id={id} className="py-20 pt-32 bg-zinc-900/80 text-white transition-colors duration-500 relative z-20">
       <div className="max-w-5xl mx-auto px-4">
         <h2 className="text-3xl font-bold mb-10 text-center flex items-center justify-center gap-2 animate-fade-in">
           <Star className="inline-block text-white drop-shadow-glow" size={28} />

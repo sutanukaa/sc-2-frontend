@@ -1,32 +1,31 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import Image from "next/image";
 
 interface NavItem {
   label: string;
-  href: string;
+  sectionId: string;
 }
 
 interface NavigationBarProps {
   logo?: string;
   logoAlt?: string;
   items: NavItem[];
-  activeHref: string;
+  activeSection: string;
   pillColor: string;
-  hoveredPillTextColor: string;
   pillTextColor: string;
+  onNavClick: (sectionId: string) => void;
 }
 
 export default function NavigationBar({
   logo,
   logoAlt,
   items,
-  activeHref,
+  activeSection,
   pillColor,
-  hoveredPillTextColor,
   pillTextColor,
+  onNavClick,
 }: NavigationBarProps) {
   return (
     <nav className="flex items-center justify-between w-full">
@@ -46,15 +45,15 @@ export default function NavigationBar({
       {/* Navigation Items */}
       <div className="flex items-center space-x-2">
         {items.map((item) => {
-          const isActive = item.href === activeHref;
+          const isActive = item.sectionId === activeSection;
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 hover:scale-105 ${
+            <button
+              key={item.sectionId}
+              onClick={() => onNavClick(item.sectionId)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 transform ${
                 isActive
-                  ? "text-white"
-                  : "text-gray-300 hover:text-white"
+                  ? "text-white shadow-lg"
+                  : "text-gray-300 hover:text-white hover:bg-gray-800/50"
               }`}
               style={{
                 backgroundColor: isActive ? pillColor : "transparent",
@@ -62,7 +61,7 @@ export default function NavigationBar({
               }}
             >
               {item.label}
-            </Link>
+            </button>
           );
         })}
       </div>
