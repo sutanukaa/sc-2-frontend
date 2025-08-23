@@ -1,9 +1,13 @@
 import { Briefcase } from "lucide-react";
 import React from "react";
 
-export default function AboutSection() {
+interface AboutSectionProps {
+  id?: string;
+}
+
+export default function AboutSection({ id }: AboutSectionProps) {
   return (
-    <section className="py-20 bg-black text-white transition-colors duration-500">
+    <section id={id} className="py-20 pt-32 bg-black/80 text-white transition-colors duration-500 relative z-20">
       <div className="max-w-4xl mx-auto px-4 text-center">
         <h2 className="text-3xl font-bold mb-4 flex items-center justify-center gap-2 animate-fade-in">
           <Briefcase className="inline-block text-white drop-shadow-glow" size={32} />
