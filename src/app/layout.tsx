@@ -10,7 +10,7 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   title: "CampusPlace - Smart Campus Placement Platform",
-  description: "Revolutionize your campus placement process with AI-powered automation. Students get personalized guidance while placement cells streamline company coordination.",
+  description: "Revolutionize your campus placement process with AI-powered automation. Students get personalized guidance while placement cells streamline company coordination and eligibility verification.",
 };
 
 export default function RootLayout({

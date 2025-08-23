@@ -1,0 +1,10 @@
+warning: in the working copy of 'src/app/globals.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/layout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/page.tsx', LF will be replaced by CRLF the next time Git touches it
+package.json
+src/app/globals.css
+src/app/page.tsx
+src/components/landing-page/CampusPlacementHero.tsx
+src/components/landing-page/components/PillNav.tsx
+src/components/landing-page/components/Scrolls.tsx
+src/components/landing-page/index.ts
