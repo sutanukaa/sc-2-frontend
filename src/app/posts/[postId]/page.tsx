@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Clock, MapPin, Building, User, Award, TrendingUp, ExternalLink, Calendar, CheckCircle, XCircle, AlertCircle, FileText, Target, Brain } from 'lucide-react';
+import { ArrowLeft, Clock, Building, Award, TrendingUp, ExternalLink, CheckCircle, XCircle, AlertCircle, Target, Brain } from 'lucide-react';
 import { useParams } from 'next/navigation';
 
 interface UserStats {
@@ -10,7 +10,7 @@ interface UserStats {
   stream: string;
   batch: string;
   institute: string;
-  cgpa: number;
+  avg_cgpa: number;
   activeBacklogs: number;
   skillsCount: number;
   skills: Array<{
@@ -26,47 +26,27 @@ interface PostDetail {
   id: string;
   title: string;
   content: string;
-  company: {
-    name: string;
-    logo: string;
-    website: string;
-  };
-  jobDetails: {
-    role: string;
-    type: 'Internship' | 'Full-time' | 'Part-time';
-    location: string;
-    salary: string;
-    deadline: string;
-    requirements: {
-      cgpa: number;
-      backlogs: number;
-      skills: string[];
-      courses: string[];
-      experience?: string;
-    };
+  company: string;
+  website: string;
+  registration_link: string;
+  role: string;
+  ctc: string;
+  type: 'Internship' | 'Full-time' | 'Part-time';
+  criteria: {
+    cgpa: number;
+    backlogs: number;
+    skills: string[];
+    courses: string[];
+    experience?: string;
   };
   author: {
     name: string;
     role: string;
     avatar: string;
   };
-  timestamp: string;
-  description: string;
   responsibilities: string[];
   benefits: string[];
   applicationProcess: string[];
-  attachments?: Array<{
-    name: string;
-    url: string;
-    type: 'pdf' | 'doc' | 'link';
-  }>;
-  stats: {
-    views: number;
-    applicants: number;
-    positions: number;
-  };
-  isActive: boolean;
-  hasUserApplied: boolean;
 }
 
 interface EligibilityCheck {
@@ -89,7 +69,6 @@ interface StudyPlan {
   modules: Array<{
     id: string;
     title: string;
-    type: 'reading' | 'video' | 'practice' | 'quiz';
     duration: string;
     description: string;
     resources: Array<{
@@ -97,9 +76,7 @@ interface StudyPlan {
       url: string;
       type: 'article' | 'video' | 'tutorial' | 'documentation';
     }>;
-    completed: boolean;
   }>;
-  progress: number;
 }
 
 const PostDetailPage: React.FC = () => {
@@ -120,7 +97,7 @@ const PostDetailPage: React.FC = () => {
     stream: "Computer Science Engineering",
     batch: "2026",
     institute: "Indian Institute of Technology",
-    cgpa: 8.2,
+    avg_cgpa: 8.2,
     activeBacklogs: 1,
     skillsCount: 12,
     skills: [
@@ -139,32 +116,24 @@ const PostDetailPage: React.FC = () => {
     id: postId || "post-1",
     title: "Google SDE Internship 2025 - Summer Program",
     content: "Google is seeking passionate software engineering interns for our Summer 2025 program. Join our team and work on cutting-edge projects that impact billions of users worldwide.",
-    company: {
-      name: "Google",
-      logo: "🔍",
-      website: "https://google.com"
-    },
-    jobDetails: {
-      role: "Software Development Engineer Intern",
-      type: "Internship",
-      location: "Bangalore, India",
-      salary: "₹80,000/month + Benefits",
-      deadline: "September 15, 2025",
-      requirements: {
-        cgpa: 8.0,
-        backlogs: 0,
-        skills: ["JavaScript", "Python", "Data Structures", "Algorithms", "System Design"],
-        courses: ["Computer Science", "Information Technology", "Electronics"],
-        experience: "Previous internship preferred but not mandatory"
-      }
+    company: 'Google',
+    website: 'https://google.com',
+    registration_link: 'forms.something.com',
+    role: 'Software Development Engineer Intern',
+    ctc: '₹80,000/month + Benefits',
+    type: "Internship",
+    criteria: {
+      cgpa: 8.0,
+      backlogs: 0,
+      skills: ["JavaScript", "Python", "Data Structures", "Algorithms", "System Design"],
+      courses: ["Computer Science", "Information Technology", "Electronics"],
+      experience: "Previous internship preferred but not mandatory"
     },
     author: {
       name: "Dr. Priya Mehta",
       role: "Placement Officer",
       avatar: "👩‍💼"
     },
-    timestamp: "2 hours ago",
-    description: "This internship program offers hands-on experience with Google's cutting-edge technology stack. Interns will work alongside experienced engineers on real-world projects that directly impact Google's products and services.",
     responsibilities: [
       "Develop and maintain web applications using modern frameworks",
       "Collaborate with cross-functional teams on product features",
@@ -185,19 +154,7 @@ const PostDetailPage: React.FC = () => {
       "Technical interview rounds (2-3 rounds)",
       "HR interview and background verification",
       "Offer letter and documentation"
-    ],
-    attachments: [
-      { name: "Google_Internship_JD.pdf", url: "#", type: "pdf" },
-      { name: "Application_Form.doc", url: "#", type: "doc" },
-      { name: "Company_Website", url: "https://careers.google.com", type: "link" }
-    ],
-    stats: {
-      views: 1245,
-      applicants: 89,
-      positions: 15
-    },
-    isActive: true,
-    hasUserApplied: false
+    ]
   };
 
   const mockEligibility: EligibilityCheck = {
@@ -240,42 +197,35 @@ const PostDetailPage: React.FC = () => {
       {
         id: "module-1",
         title: "Data Structures & Algorithms Fundamentals",
-        type: "practice",
         duration: "2 weeks",
         description: "Master essential DSA concepts required for Google interviews",
         resources: [
           { title: "Introduction to Algorithms", url: "#", type: "article" },
           { title: "DSA Video Course", url: "#", type: "video" },
           { title: "LeetCode Practice", url: "#", type: "tutorial" }
-        ],
-        completed: false
+        ]
       },
       {
         id: "module-2",
         title: "System Design Basics",
-        type: "reading",
         duration: "1 week",
         description: "Learn system design principles and common patterns",
         resources: [
           { title: "System Design Primer", url: "#", type: "documentation" },
           { title: "Scalability Patterns", url: "#", type: "article" }
-        ],
-        completed: false
+        ]
       },
       {
         id: "module-3",
         title: "Mock Interviews",
-        type: "practice",
         duration: "1 week",
         description: "Practice with mock technical interviews",
         resources: [
           { title: "Pramp Mock Interviews", url: "#", type: "tutorial" },
           { title: "InterviewBit Practice", url: "#", type: "tutorial" }
-        ],
-        completed: false
+        ]
       }
-    ],
-    progress: 0
+    ]
   };
 
   useEffect(() => {
@@ -361,49 +311,39 @@ const PostDetailPage: React.FC = () => {
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-2xl">
-                  {post.company.logo}
+                  {post.company.charAt(0)}
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-white mb-2">{post.title}</h1>
                   <div className="flex items-center gap-4 text-sm text-gray-400">
                     <span className="flex items-center gap-1">
                       <Building className="w-4 h-4" />
-                      {post.company.name}
+                      {post.company}
                     </span>
                     <span className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      {post.jobDetails.location}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {post.timestamp}
+                      <ExternalLink className="w-4 h-4" />
+                      <a href={post.website} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition-colors">
+                        Company Website
+                      </a>
                     </span>
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-lg font-semibold text-white mb-1">{post.jobDetails.salary}</div>
-                <div className="text-sm text-gray-400">Deadline: {post.jobDetails.deadline}</div>
+                <div className="text-lg font-semibold text-white mb-1">{post.ctc}</div>
+                <div className="text-sm text-gray-400">Role: {post.role}</div>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-800 rounded-lg">
+            <div className="mb-6 p-4 bg-gray-800 rounded-lg">
               <div className="text-center">
-                <div className="text-xl font-bold text-white">{post.stats.views}</div>
-                <div className="text-xs text-gray-400">Views</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xl font-bold text-white">{post.stats.applicants}</div>
-                <div className="text-xs text-gray-400">Applicants</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xl font-bold text-white">{post.stats.positions}</div>
-                <div className="text-xs text-gray-400">Positions</div>
+                <div className="text-xl font-bold text-white">{post.role}</div>
+                <div className="text-xs text-gray-400">Position</div>
               </div>
             </div>
 
             <div className="prose prose-invert max-w-none">
-              <p className="text-gray-300 mb-6">{post.description}</p>
+              <p className="text-gray-300 mb-6">{post.content}</p>
               
               <div className="grid md:grid-cols-2 gap-6 mb-6">
                 <div>
@@ -447,25 +387,6 @@ const PostDetailPage: React.FC = () => {
                   ))}
                 </div>
               </div>
-
-              {post.attachments && post.attachments.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-3">Resources & Downloads</h3>
-                  <div className="flex flex-wrap gap-3">
-                    {post.attachments.map((attachment, index) => (
-                      <a
-                        key={index}
-                        href={attachment.url}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg hover:border-gray-500 transition-colors"
-                      >
-                        <FileText className="w-4 h-4 text-blue-400" />
-                        <span className="text-sm text-white">{attachment.name}</span>
-                        <ExternalLink className="w-3 h-3 text-gray-400" />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </>
@@ -562,17 +483,8 @@ const PostDetailPage: React.FC = () => {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold text-white">{studyPlan.progress}%</div>
-              <div className="text-sm text-gray-400">Complete</div>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <div className="w-full bg-gray-700 rounded-full h-2">
-              <div 
-                className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${studyPlan.progress}%` }}
-              ></div>
+              <div className="text-2xl font-bold text-white">{studyPlan.modules.length}</div>
+              <div className="text-sm text-gray-400">Modules</div>
             </div>
           </div>
 
@@ -581,25 +493,13 @@ const PostDetailPage: React.FC = () => {
               <div key={module.id} className="border border-gray-800 rounded-lg p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-start gap-3">
-                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
-                      module.completed 
-                        ? 'border-green-500 bg-green-500' 
-                        : 'border-gray-600 bg-gray-800'
-                    }`}>
-                      {module.completed ? (
-                        <CheckCircle className="w-4 h-4 text-white" />
-                      ) : (
-                        <span className="text-sm font-medium text-gray-400">{index + 1}</span>
-                      )}
+                    <div className="w-8 h-8 rounded-full border-2 border-gray-600 bg-gray-800 flex items-center justify-center">
+                      <span className="text-sm font-medium text-gray-400">{index + 1}</span>
                     </div>
                     <div>
                       <h4 className="font-medium text-white">{module.title}</h4>
                       <p className="text-sm text-gray-400 mb-2">{module.description}</p>
                       <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <Brain className="w-3 h-3" />
-                          {module.type}
-                        </span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {module.duration}
@@ -685,9 +585,9 @@ const PostDetailPage: React.FC = () => {
               </button>
               <div className="flex-1">
                 <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
-                  {post.jobDetails.role}
+                  {post.role}
                 </h1>
-                <p className="text-sm text-gray-400">{post.company.name}</p>
+                <p className="text-sm text-gray-400">{post.company}</p>
               </div>
             </div>
           </div>
@@ -739,7 +639,7 @@ const PostDetailPage: React.FC = () => {
                       <Award className="w-4 h-4" />
                       <span className="text-sm">CGPA</span>
                     </div>
-                    <span className="text-white text-sm font-medium">{userStats.cgpa}</span>
+                    <span className="text-white text-sm font-medium">{userStats.avg_cgpa}</span>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -767,33 +667,22 @@ const PostDetailPage: React.FC = () => {
                 </div>
 
                 <div className="border-t border-gray-800 pt-4">
-                  {post.isActive && (
-                    <div className="space-y-3">
-                      {post.hasUserApplied ? (
-                        <div className="p-3 bg-green-500/20 border border-green-500/30 rounded-lg text-center">
-                          <CheckCircle className="w-5 h-5 text-green-400 mx-auto mb-1" />
-                          <p className="text-sm text-green-400">Application Submitted</p>
-                        </div>
-                      ) : eligibility.isEligible ? (
-                        <button
-                          onClick={handleApply}
-                          className="w-full p-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-colors font-medium"
-                        >
-                          Apply Now
-                        </button>
-                      ) : (
-                        <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-center">
-                          <XCircle className="w-5 h-5 text-red-400 mx-auto mb-1" />
-                          <p className="text-sm text-red-400 mb-2">Not Eligible</p>
-                          <p className="text-xs text-gray-400">Check recommendations in Summarise tab</p>
-                        </div>
-                      )}
-                      
-                      <div className="text-xs text-gray-500 text-center">
-                        Deadline: {post.jobDetails.deadline}
+                  <div className="space-y-3">
+                    {eligibility.isEligible ? (
+                      <button
+                        onClick={handleApply}
+                        className="w-full p-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-colors font-medium"
+                      >
+                        Apply Now
+                      </button>
+                    ) : (
+                      <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-center">
+                        <XCircle className="w-5 h-5 text-red-400 mx-auto mb-1" />
+                        <p className="text-sm text-red-400 mb-2">Not Eligible</p>
+                        <p className="text-xs text-gray-400">Check recommendations in Summarise tab</p>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -802,16 +691,16 @@ const PostDetailPage: React.FC = () => {
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-400">Min CGPA</span>
-                    <span className="text-white">{post.jobDetails.requirements.cgpa}</span>
+                    <span className="text-white">{post.criteria.cgpa}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Max Backlogs</span>
-                    <span className="text-white">{post.jobDetails.requirements.backlogs}</span>
+                    <span className="text-white">{post.criteria.backlogs}</span>
                   </div>
                   <div>
                     <span className="text-gray-400 block mb-2">Required Skills</span>
                     <div className="flex flex-wrap gap-1">
-                      {post.jobDetails.requirements.skills.map((skill, index) => (
+                      {post.criteria.skills.map((skill, index) => (
                         <span
                           key={index}
                           className={`px-2 py-1 rounded text-xs ${
@@ -828,7 +717,7 @@ const PostDetailPage: React.FC = () => {
                   <div>
                     <span className="text-gray-400 block mb-2">Eligible Courses</span>
                     <div className="flex flex-wrap gap-1">
-                      {post.jobDetails.requirements.courses.map((course, index) => (
+                      {post.criteria.courses.map((course, index) => (
                         <span
                           key={index}
                           className={`px-2 py-1 rounded text-xs ${
@@ -849,11 +738,11 @@ const PostDetailPage: React.FC = () => {
               <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
                 <h3 className="font-semibold text-white mb-4">Company Info</h3>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="text-2xl">{post.company.logo}</div>
+                  <div className="text-2xl">{post.company.charAt(0)}</div>
                   <div>
-                    <h4 className="font-medium text-white">{post.company.name}</h4>
+                    <h4 className="font-medium text-white">{post.company}</h4>
                     <a 
-                      href={post.company.website}
+                      href={post.website}
                       className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
                       target="_blank"
                       rel="noopener noreferrer"
@@ -866,15 +755,22 @@ const PostDetailPage: React.FC = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-400">Position Type</span>
-                    <span className="text-white">{post.jobDetails.type}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Location</span>
-                    <span className="text-white">{post.jobDetails.location}</span>
+                    <span className="text-white">{post.type}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Salary</span>
-                    <span className="text-white">{post.jobDetails.salary}</span>
+                    <span className="text-white">{post.ctc}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Registration</span>
+                    <a 
+                      href={post.registration_link} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      Apply Here
+                    </a>
                   </div>
                 </div>
               </div>
