@@ -1,4 +1,5 @@
-// Utility function for className concatenation (like clsx/twMerge)
-export function cn(...args: (string | undefined | null | false)[]): string {
-  return args.filter(Boolean).join(" ");
+import { type ClassValue, clsx } from "clsx";
+
+export function cn(...inputs: ClassValue[]) {
+  return clsx(inputs);
 }

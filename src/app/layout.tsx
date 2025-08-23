@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import "./globals.css";
 import { Manrope } from "next/font/google";
+import "./globals.css";
 
 const manrope = Manrope({
-  subsets: ["latin"],
   variable: "--font-manrope",
+  subsets: ["latin"],
+  weight: ["200", "300", "400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -19,11 +20,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      </head>
-      <body className={`${manrope.variable} font-manrope antialiased`}>
+      <body
+        className={`${manrope.variable} font-manrope antialiased`}
+      >
         {children}
       </body>
     </html>
