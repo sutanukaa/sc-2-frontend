@@ -75,18 +75,26 @@ interface PostDetail {
 }
 
 interface EligibilityCheck {
+  id: string;
+  name: string;
+  course: string;
+  stream: string;
+  batch: string;
+  institute: string;
+  avg_cgpa: number;
+  activeBacklogs: number;
+  skillsCount: number;
+  skills: Array<{
+    name: string;
+    level: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
+  }>;
   isEligible: boolean;
-  score: number;
   breakdown: {
-    cgpa: { status: "pass" | "fail" | "partial"; message: string };
-    backlogs: { status: "pass" | "fail"; message: string };
-    skills: {
-      status: "pass" | "fail" | "partial";
-      message: string;
-      matchedSkills: string[];
-      missingSkills: string[];
-    };
-    course: { status: "pass" | "fail"; message: string };
+    cgpa: { status: 'pass' | 'fail' | 'partial'; message: string; };
+    backlogs: { status: 'pass' | 'fail'; message: string; };
+    course: { status: 'pass' | 'fail'; message: string; };
+    batch: { status: 'pass' | 'fail'; message: string; };
+    skills: { status: 'pass' | 'fail' | 'partial'; message: string; matchedSkills: string[]; missingSkills: string[]; };
   };
   recommendations: string[];
 }
@@ -115,11 +123,19 @@ const PostDetailPage: React.FC = () => {
     "post"
   );
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isPlannerLoading, setIsPlannerLoading] = useState<boolean>(false);
+  const [isEligibilityLoading, setIsEligibilityLoading] = useState<boolean>(false);
+  const [isSecondaryDataLoading, setIsSecondaryDataLoading] = useState<boolean>(false);
+  const [plannerError, setPlannerError] = useState<string | null>(null);
   const [post, setPost] = useState<PostDetail | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [eligibility, setEligibility] = useState<EligibilityCheck | null>(null);
   const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Use refs to track if APIs have been called to prevent duplicate calls
+  const eligibilityCalledRef = useRef(false);
+  const plannerCalledRef = useRef(false);
 
   // const mockUserStats: UserStats = {
   //   id: "user-1",
@@ -294,27 +310,75 @@ const PostDetailPage: React.FC = () => {
     }
   }, []);
 
+  // Fetch eligibility data from API
   const fetchEligibilityData = useCallback(async () => {
-    if (!postId || !userStats) return;
-
     try {
-      setError(null);
+      if (!postId || !userStats) {
+        console.log('Post ID or user stats not available for eligibility API call');
+        return;
+      }
 
-      // Call your API route
-      const response = await fetch(
-        `/api/post/${postId}/eligibility/${userStats.id}`
-      );
+      setIsEligibilityLoading(true);
+
+      // Use actual user ID from userStats
+      const userId = userStats.id;
+      
+      const response = await fetch(`/api/post/${postId}/eligibility/${userId}`);
+      
       if (!response.ok) {
-        throw new Error("Failed to fetch eligibility data");
+        throw new Error(`Eligibility API failed: ${response.status} ${response.statusText}`);
       }
 
       const eligibilityData = await response.json();
+      console.log('Eligibility API response:', eligibilityData);
+      
       setEligibility(eligibilityData);
+      
+      // Update user stats with real data from eligibility response
+      if (eligibilityData) {
+        setUserStats(prev => prev ? {
+          ...prev,
+          name: eligibilityData.name,
+          course: eligibilityData.course,
+          stream: eligibilityData.stream,
+          batch: eligibilityData.batch,
+          institute: eligibilityData.institute,
+          avg_cgpa: eligibilityData.avg_cgpa,
+          activeBacklogs: eligibilityData.activeBacklogs,
+          skillsCount: eligibilityData.skillsCount,
+          skills: eligibilityData.skills
+        } : prev);
+      }
     } catch (err) {
-      console.error("Error fetching eligibility data:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch eligibility data"
-      );
+      console.error('Error fetching eligibility data:', err);
+      // Create a basic fallback eligibility object
+      const fallbackEligibility: EligibilityCheck = {
+        id: "fallback",
+        name: "User",
+        course: "Unknown",
+        stream: "Unknown",
+        batch: "Unknown",
+        institute: "Unknown",
+        avg_cgpa: 0,
+        activeBacklogs: 0,
+        skillsCount: 0,
+        skills: [],
+        isEligible: false,
+        breakdown: {
+          cgpa: { status: 'fail', message: 'Unable to verify CGPA' },
+          backlogs: { status: 'fail', message: 'Unable to verify backlogs' },
+          course: { status: 'fail', message: 'Unable to verify course' },
+          batch: { status: 'fail', message: 'Unable to verify batch' },
+          skills: { status: 'fail', message: 'Unable to verify skills', matchedSkills: [], missingSkills: [] }
+        },
+        recommendations: [
+          "Please try refreshing the page",
+          "Contact support if the issue persists"
+        ]
+      };
+      setEligibility(fallbackEligibility);
+    } finally {
+      setIsEligibilityLoading(false);
     }
   }, [postId, userStats]);
 
@@ -327,8 +391,8 @@ const PostDetailPage: React.FC = () => {
         // Set mock study plan data for planner tab
         setStudyPlan(mockStudyPlan);
       } catch (error) {
-        console.error("Error loading post or user:", error);
-        setError("Failed to load post or user data");
+        console.error('Error loading data:', error);
+        setError('Failed to load data');
       } finally {
         setIsLoading(false);
       }
@@ -339,12 +403,49 @@ const PostDetailPage: React.FC = () => {
     }
   }, [postId, fetchPostData, fetchUserData, mockStudyPlan]);
 
-  // Fetch eligibility when both post and userStats are available
+  // Call eligibility and planner APIs after post and user data are loaded
   useEffect(() => {
-    if (post && userStats) {
-      fetchEligibilityData();
+    if (post && userStats && !eligibilityCalledRef.current && !plannerCalledRef.current) {
+      setIsSecondaryDataLoading(true);
+      
+      // Mark APIs as called to prevent duplicate calls
+      eligibilityCalledRef.current = true;
+      plannerCalledRef.current = true;
+      
+      // Call both APIs in parallel
+      Promise.all([
+        fetchEligibilityData(),
+        fetchStudyPlanData()
+      ]).catch(error => {
+        console.error('Error loading eligibility and planner data:', error);
+      }).finally(() => {
+        setIsSecondaryDataLoading(false);
+      });
     }
-  }, [post, userStats, fetchEligibilityData]);
+  }, [post, userStats]); // Remove fetchEligibilityData and fetchStudyPlanData from dependencies
+
+  // Reset refs when postId changes to allow fresh API calls for different posts
+  useEffect(() => {
+    eligibilityCalledRef.current = false;
+    plannerCalledRef.current = false;
+  }, [postId]);
+
+  // Manual retry function for eligibility and planner data
+  const retrySecondaryData = useCallback(async () => {
+    if (post && userStats) {
+      setIsSecondaryDataLoading(true);
+      try {
+        await Promise.all([
+          fetchEligibilityData(),
+          fetchStudyPlanData()
+        ]);
+      } catch (error) {
+        console.error('Error retrying secondary data:', error);
+      } finally {
+        setIsSecondaryDataLoading(false);
+      }
+    }
+  }, [post, userStats, fetchEligibilityData, fetchStudyPlanData]);
 
   const handleApply = async () => {
     if (post) {
@@ -539,7 +640,13 @@ const PostDetailPage: React.FC = () => {
 
   const SummariseTab: React.FC = () => (
     <div className='space-y-6'>
-      {eligibility && (
+      {isEligibilityLoading ? (
+        <div className='bg-gray-900 rounded-xl p-12 border border-gray-800 text-center'>
+          <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-400">Checking eligibility...</p>
+          <p className="text-sm text-gray-500 mt-2">Please wait while we analyze your profile</p>
+        </div>
+      ) : eligibility ? (
         <div className='bg-gray-900 rounded-xl p-6 border border-gray-800'>
           <div className='flex items-center justify-between mb-6'>
             <h2 className='text-xl font-bold text-white'>
@@ -551,8 +658,7 @@ const PostDetailPage: React.FC = () => {
               )}`}
             >
               <span className='font-medium'>
-                {eligibility.isEligible ? "Eligible" : "Not Eligible"} (
-                {eligibility.score}% match)
+                {eligibility.isEligible ? "Eligible" : "Not Eligible"}
               </span>
             </div>
           </div>
@@ -625,15 +731,46 @@ const PostDetailPage: React.FC = () => {
             </div>
           )}
         </div>
+      ) : (
+        <div className='bg-gray-900 rounded-xl p-12 border border-gray-800 text-center'>
+          <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Target className='w-12 h-12 text-gray-500' />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Eligibility Check Failed</h2>
+          <p className="text-gray-400 mb-8 max-w-md mx-auto">
+            We couldn't verify your eligibility for this position. Please try again or contact support.
+          </p>
+          <button 
+            onClick={retrySecondaryData}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            Retry All Checks
+          </button>
+        </div>
       )}
     </div>
   );
 
   const PlannerTab: React.FC = () => (
-    <div className='space-y-6'>
-      {studyPlan && (
-        <div className='bg-gray-900 rounded-xl p-6 border border-gray-800'>
-          <div className='flex items-center justify-between mb-6'>
+    <div className="space-y-6">
+      {isPlannerLoading ? (
+        <div className="bg-gray-900 rounded-xl p-12 border border-gray-800 text-center">
+          <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-400">Generating study plan...</p>
+        </div>
+      ) : plannerError ? (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+          <p className="text-red-400 text-sm mb-3">{plannerError}</p>
+          <button 
+            onClick={retrySecondaryData}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+          >
+            Retry All
+          </button>
+        </div>
+      ) : studyPlan ? (
+        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className='text-xl font-bold text-white'>
                 {studyPlan.title}
@@ -716,6 +853,22 @@ const PostDetailPage: React.FC = () => {
             ))}
           </div>
         </div>
+      ) : (
+        <div className="bg-gray-900 rounded-xl p-12 border border-gray-800 text-center">
+          <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Building className="w-12 h-12 text-gray-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Study Plan Not Available</h2>
+          <p className="text-gray-400 mb-8 max-w-md mx-auto">
+            The study plan for this post is not yet generated. Please check back later.
+          </p>
+          <button 
+            onClick={retrySecondaryData}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            Generate Plan
+          </button>
+        </div>
       )}
     </div>
   );
@@ -742,14 +895,37 @@ const PostDetailPage: React.FC = () => {
     );
   }
 
-  if (!post || !userStats || !eligibility) {
+  if (!post || !userStats) {
     return (
       <div className='min-h-screen bg-black text-white flex items-center justify-center'>
         <div className='text-center'>
-          <h1 className='text-2xl font-bold mb-2'>Post not found</h1>
-          <p className='text-gray-400'>
-            The requested post could not be loaded.
-          </p>
+          {error ? (
+            <>
+              <h1 className='text-2xl font-bold mb-2 text-red-400'>Error Loading Post</h1>
+              <p className='text-gray-400 mb-4'>
+                {error}
+              </p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Retry
+              </button>
+            </>
+          ) : (
+            <>
+              <h1 className='text-2xl font-bold mb-2'>Post not found</h1>
+              <p className='text-gray-400'>
+                The requested post could not be loaded.
+              </p>
+              <button 
+                onClick={() => window.history.back()}
+                className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium mt-4"
+              >
+                Go Back
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
@@ -775,6 +951,12 @@ const PostDetailPage: React.FC = () => {
                   {post.role}
                 </h1>
                 <p className='text-sm text-gray-400'>{post.company}</p>
+                {isSecondaryDataLoading && (
+                  <div className='flex items-center gap-2 mt-2'>
+                    <div className='w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin'></div>
+                    <span className='text-xs text-blue-400'>Loading eligibility & study plan...</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -788,14 +970,17 @@ const PostDetailPage: React.FC = () => {
                   {(["post", "summarise", "planner"] as const).map((tab) => (
                     <button
                       key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`px-6 py-2 rounded-md text-sm font-medium transition-colors capitalize ${
+                      onClick={() => handleTabChange(tab)}
+                      className={`px-6 py-2 rounded-md text-sm font-medium transition-colors capitalize flex items-center gap-2 ${
                         activeTab === tab
                           ? "bg-blue-600 text-white"
                           : "text-gray-400 hover:text-white hover:bg-gray-700"
                       }`}
                     >
                       {tab}
+                      {tab === 'planner' && isPlannerLoading && (
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -855,33 +1040,65 @@ const PostDetailPage: React.FC = () => {
 
                   <div className='flex items-center justify-between'>
                     <span className='text-sm text-gray-400'>Eligibility</span>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs border ${getEligibilityColor(
-                        eligibility.isEligible
-                      )}`}
-                    >
-                      {eligibility.isEligible ? "Eligible" : "Not Eligible"}
-                    </span>
+                    {isEligibilityLoading ? (
+                      <span className="px-2 py-1 rounded-full text-xs border bg-blue-500/20 text-blue-400 border-blue-500/30">
+                        <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin inline-block mr-1"></div>
+                        Checking...
+                      </span>
+                    ) : eligibility ? (
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs border ${getEligibilityColor(
+                          eligibility.isEligible
+                        )}`}
+                      >
+                        {eligibility.isEligible ? "Eligible" : "Not Eligible"}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded-full text-xs border bg-gray-500/20 text-gray-400 border-gray-500/30">
+                        Not Available
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 <div className='border-t border-gray-800 pt-4'>
                   <div className='space-y-3'>
-                    {eligibility.isEligible ? (
-                      <button
-                        onClick={handleApply}
-                        className='w-full p-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-colors font-medium'
-                      >
-                        Apply Now
-                      </button>
-                    ) : (
-                      <div className='p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-center'>
-                        <XCircle className='w-5 h-5 text-red-400 mx-auto mb-1' />
-                        <p className='text-sm text-red-400 mb-2'>
-                          Not Eligible
+                    {isEligibilityLoading ? (
+                      <div className='p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg text-center'>
+                        <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-1"></div>
+                        <p className='text-sm text-blue-400 mb-2'>
+                          Checking Eligibility...
                         </p>
                         <p className='text-xs text-gray-400'>
-                          Check recommendations in Summarise tab
+                          Please wait while we verify your eligibility
+                        </p>
+                      </div>
+                    ) : eligibility ? (
+                      eligibility.isEligible ? (
+                        <button
+                          onClick={handleApply}
+                          className='w-full p-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-colors font-medium'
+                        >
+                          Apply Now
+                        </button>
+                      ) : (
+                        <div className='p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-center'>
+                          <XCircle className='w-5 h-5 text-red-400 mx-auto mb-1' />
+                          <p className='text-sm text-red-400 mb-2'>
+                            Not Eligible
+                          </p>
+                          <p className='text-xs text-gray-400'>
+                            Check recommendations in Summarise tab
+                          </p>
+                        </div>
+                      )
+                    ) : (
+                      <div className='p-3 bg-gray-500/20 border border-gray-500/30 rounded-lg text-center'>
+                        <p className='text-sm text-gray-400 mb-2'>
+                          Eligibility Not Available
+                        </p>
+                        <p className='text-xs text-gray-400'>
+                          Please check the Summarise tab for details
                         </p>
                       </div>
                     )}
