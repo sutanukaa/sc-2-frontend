@@ -5,10 +5,10 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string; userId: string } }
+  { params }: { params: Promise<{ id: string; userId: string }> }
 ) {
   try {
-    const { id, userId } = params;
+    const { id, userId } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -97,8 +97,8 @@ export async function GET(
     // Send to backend for eligibility checking
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
     const apiEndpoint = backendUrl.endsWith('/') 
-      ? `${backendUrl}job/eligibility`
-      : `${backendUrl}/job/eligibility`;
+      ? `${backendUrl}eligibility/check`
+      : `${backendUrl}/eligibility/check`;
 
     console.log(`Calling backend eligibility API: ${apiEndpoint}`);
 
@@ -130,10 +130,10 @@ export async function GET(
       );
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Eligibility check failed:", error);
     return NextResponse.json(
-      { error: error.message || "Something went wrong" },
+      { error: error || "Something went wrong" },
       { status: 500 }
     );
   }

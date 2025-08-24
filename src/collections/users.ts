@@ -45,12 +45,12 @@ export type UpdateUserData = Partial<Omit<UserData, '$id' | '$createdAt' | '$upd
 export const userDB = {
   get: async (id: string): Promise<UserData> => {
     try {
-      const doc = await databases.getDocument<any>(
+      const doc = await databases.getDocument<UserData>(
         DATABASE_ID,
         USERS_COLLECTION_ID,
         id
       );
-      return doc as UserData;
+      return doc;
     } catch (error) {
       console.error("Error getting user:", error);
       throw error;
@@ -69,13 +69,13 @@ export const userDB = {
         updatedAt: new Date().toISOString(),
       };
 
-      const doc = await databases.createDocument<any>(
+      const doc = await databases.createDocument<UserData>(
         DATABASE_ID,
         USERS_COLLECTION_ID,
         id,
         userData
       );
-      return doc as UserData;
+      return doc;
     } catch (error) {
       console.error("Error creating user:", error);
       throw error;
@@ -89,13 +89,13 @@ export const userDB = {
         updatedAt: new Date().toISOString(),
       };
 
-      const doc = await databases.updateDocument<any>(
+      const doc = await databases.updateDocument<UserData>(
         DATABASE_ID,
         USERS_COLLECTION_ID,
         id,
         updateData
       );
-      return doc as UserData;
+      return doc;
     } catch (error) {
       console.error("Error updating user:", error);
       throw error;
@@ -113,7 +113,7 @@ export const userDB = {
 
   list: async (queries?: string[]) => {
     try {
-      return await databases.listDocuments<any>(
+      return await databases.listDocuments<UserData>(
         DATABASE_ID,
         USERS_COLLECTION_ID,
         queries
@@ -127,12 +127,12 @@ export const userDB = {
   // Helper method to get user by email
   getByEmail: async (email: string): Promise<UserData | null> => {
     try {
-      const result = await databases.listDocuments<any>(
+      const result = await databases.listDocuments<UserData>(
         DATABASE_ID,
         USERS_COLLECTION_ID,
         [`email=${email}`]
       );
-      return result.documents.length > 0 ? result.documents[0] as UserData : null;
+      return result.documents.length > 0 ? result.documents[0] : null;
     } catch (error) {
       console.error("Error getting user by email:", error);
       throw error;
