@@ -119,7 +119,37 @@ export async function POST(req: Request) {
       role: extractedData.role,
       ctc: extractedData.ctc,
       type: extractedData.type,
-      criteria: extractedData.criteria,
+      // Sanitize criteria (especially skills) to satisfy Appwrite attribute constraints
+      criteria: (() => {
+        const criteria = extractedData.criteria || {};
+        const sanitizeStringArray = (value: unknown, maxLen = 20): string[] | undefined => {
+          if (!value) return undefined;
+            // If backend returns a single comma separated string
+          if (typeof value === 'string') {
+            value = value.split(/[,\n]/).map((v: string) => v.trim()).filter(Boolean);
+          }
+          if (!Array.isArray(value)) return undefined;
+          const cleaned = value
+            .map((item: unknown) => {
+              if (typeof item === 'string') return item.trim();
+              if (item && typeof item === 'object' && 'name' in (item as Record<string, unknown>)) {
+                const nameVal = (item as Record<string, unknown>).name;
+                return typeof nameVal === 'string' ? nameVal.trim() : String(nameVal).trim();
+              }
+              return String(item).trim();
+            })
+            .filter((s: string) => s.length > 0)
+            .map((s: string) => (s.length > maxLen ? s.slice(0, maxLen) : s));
+          return cleaned.length ? cleaned : undefined;
+        };
+
+        const sanitized = {
+          ...criteria,
+          skills: sanitizeStringArray(criteria.skills, 20),
+          courses: sanitizeStringArray(criteria.courses, 40),
+        };
+        return sanitized;
+      })(),
       responsibilities: extractedData.responsibilities,
       benefits: extractedData.benefits,
       applicationProcess: extractedData.applicationProcess,

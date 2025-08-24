@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import parse from "html-react-parser";
 import {
   ArrowLeft,
@@ -174,11 +174,11 @@ const PostDetailPage: React.FC = () => {
   //   ],
   // };
 
-  const mockStudyPlan: StudyPlan = {
+  const mockStudyPlan: StudyPlan = useMemo(() => ({
     id: "plan-1",
     title: "Google SDE Preparation Plan",
     estimatedTime: "4-6 weeks",
-    difficulty: "Medium",
+    difficulty: "Medium" as const,
     modules: [
       {
         id: "module-1",
@@ -240,7 +240,7 @@ const PostDetailPage: React.FC = () => {
         ],
       },
     ],
-  };
+  }), []);
 
   // Fetch post data from API
   const fetchPostData = useCallback(async () => {
@@ -318,23 +318,14 @@ const PostDetailPage: React.FC = () => {
     }
   }, [postId, userStats]);
 
-  // Fetch study plan data (keeping mock for now as it's not part of post API)
-  const fetchStudyPlanData = useCallback(async () => {
-    try {
-      // For now, using mock data since study plan API is separate
-      // TODO: Implement real study plan API call
-      setStudyPlan(mockStudyPlan);
-    } catch (err) {
-      console.error("Error fetching study plan data:", err);
-    }
-  }, []);
-
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       try {
         await fetchPostData();
         await fetchUserData();
+        // Set mock study plan data for planner tab
+        setStudyPlan(mockStudyPlan);
       } catch (error) {
         console.error("Error loading post or user:", error);
         setError("Failed to load post or user data");
@@ -346,7 +337,7 @@ const PostDetailPage: React.FC = () => {
     if (postId) {
       loadData();
     }
-  }, [postId, fetchPostData, fetchUserData]);
+  }, [postId, fetchPostData, fetchUserData, mockStudyPlan]);
 
   // Fetch eligibility when both post and userStats are available
   useEffect(() => {
@@ -472,8 +463,10 @@ const PostDetailPage: React.FC = () => {
               </div>
             </div>
 
-            <div className='mb-6 p-4 bg-gray-800 rounded-lg'>
-              {parse(post.content)}
+            <div className='mb-6 p-4 bg-gray-800 rounded-lg prose prose-invert prose-lg max-w-none'>
+              <div className='prose-headings:text-white prose-p:text-gray-300 prose-a:text-blue-400 prose-a:hover:text-blue-300 prose-strong:text-white prose-ul:text-gray-300 prose-ol:text-gray-300 prose-li:text-gray-300 prose-code:text-blue-300 prose-code:bg-gray-700 prose-pre:bg-gray-900 prose-blockquote:border-blue-500 prose-blockquote:text-gray-300'>
+                {parse(post.content)}
+              </div>
             </div>
 
             {/* Key Responsibilities - Only show if available */}

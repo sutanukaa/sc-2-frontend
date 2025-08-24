@@ -5,6 +5,7 @@ import {
   Plus, X, Save, Users, BarChart3, Settings, Briefcase, Shield, FileText
 } from 'lucide-react';
 import { account } from '@/lib/appwrite';
+import parse from 'html-react-parser'
 
 interface UserStats {
   name: string;
@@ -442,7 +443,7 @@ const RoleBasedDashboard: React.FC = () => {
   };
 
   const handlePostClick = (postId: string) => {
-    console.log(`Navigating to post: ${postId}`);
+    window.location.href = `/posts/${postId}`;
   };
 
   const PostSkeleton = () => (
@@ -731,7 +732,7 @@ const RoleBasedDashboard: React.FC = () => {
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-4">Organization Invitation</h2>
                         <p className="text-gray-300 mb-6 w-full mx-auto">
-                          You've been invited to join <strong>{userOrgStatus.activeInvite.organization.name}</strong> by {userOrgStatus.activeInvite.invitedBy.name}.
+                          You&apos;ve been invited to join <strong>{userOrgStatus.activeInvite.organization.name}</strong> by {userOrgStatus.activeInvite.invitedBy.name}.
                         </p>
                         
                         <div className="bg-gray-800 rounded-lg p-6 mb-6 text-left max-w-md mx-auto">
@@ -760,7 +761,7 @@ const RoleBasedDashboard: React.FC = () => {
                           
                           {userOrgStatus.activeInvite.message && (
                             <div className="mt-4 pt-4 border-t border-gray-700">
-                              <p className="text-gray-300 text-sm italic">"{userOrgStatus.activeInvite.message}"</p>
+                              <p className="text-gray-300 text-sm italic">&ldquo;{userOrgStatus.activeInvite.message}&rdquo;</p>
                             </div>
                           )}
                         </div>
@@ -871,7 +872,7 @@ const RoleBasedDashboard: React.FC = () => {
                                 </div>
 
                                 <h3 className="text-lg font-semibold text-white mb-2">{post.title}</h3>
-                                <p className="text-gray-400 text-sm mb-4 line-clamp-2">{post.content}</p>
+                                <p className="text-gray-400 text-sm mb-4 line-clamp-2">{parse(post.content)}</p>
 
                                 {/* CTC Display for opportunities */}
                                 {post.ctc && (
