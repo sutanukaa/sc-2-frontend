@@ -272,9 +272,56 @@ const StudentDashboard: React.FC = () => {
           <div className="max-w-8xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
-                  Campus Placement
-                </h1>
+                {/* Campus.IO Logo and Brand */}
+                <div className="flex items-center space-x-3">
+                  <div className="relative group">
+                    {/* Main Logo Container */}
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-all duration-300 group-hover:rotate-3">
+                      <div className="w-6 h-6 bg-white rounded-lg flex items-center justify-center">
+                        <GraduationCap className="w-4 h-4 text-purple-600" />
+                      </div>
+                    </div>
+                    
+                    {/* Floating Elements */}
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                    <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                    
+                    {/* Glow Effect */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-300 -z-10"></div>
+                  </div>
+                  
+                  {/* Company Name with Creative Typography */}
+                  <div className="relative group">
+                    <div className="flex items-baseline space-x-1">
+                      {/* Campus */}
+                      <span className="text-2xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent tracking-tight">
+                        Campus
+                      </span>
+                      
+                      {/* Dot Separator */}
+                      <div className="relative">
+                        <div className="w-2 h-2 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-pulse"></div>
+                        <div className="absolute inset-0 w-2 h-2 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full animate-ping opacity-75"></div>
+                      </div>
+                      
+                      {/* IO */}
+                      <span className="text-2xl font-black bg-gradient-to-r from-cyan-400 via-pink-400 to-purple-400 bg-clip-text text-transparent tracking-tight">
+                        IO
+                      </span>
+                    </div>
+                    
+                    {/* Subtitle */}
+                    <div className="absolute -bottom-5 left-0 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1">
+                      <span className="text-xs font-medium bg-gradient-to-r from-gray-400 to-gray-300 bg-clip-text text-transparent tracking-wider uppercase">
+                        Next-Gen Placement
+                      </span>
+                    </div>
+                    
+                    {/* Hover Glow Effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 blur-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300 -z-10"></div>
+                  </div>
+                </div>
+                
                 {userOrgStatus?.isPartOfOrg && userOrgStatus.organization && (
                   <div className="flex items-center gap-2 text-gray-400">
                     <span className="text-2xl">{userOrgStatus.organization.logo}</span>

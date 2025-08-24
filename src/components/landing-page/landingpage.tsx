@@ -2,6 +2,8 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import clsx from "clsx";
+import { useRouter } from "next/navigation";
+import { account } from "@/lib/appwrite";
 import { CompanyMarquee } from "./components/CompanyMarquee";
 import GradualSpacing from "./components/GradualSpacing";
 import NavigationBar from "./components/NavigationBar";
@@ -16,7 +18,36 @@ import {
 
 export default function LandingPage() {
   const [activeSection, setActiveSection] = useState("home");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const router = useRouter();
   
+  // Check authentication status on component mount
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const user = await account.get();
+      setIsLoggedIn(true);
+    } catch (error) {
+      setIsLoggedIn(false);
+    } finally {
+      setIsCheckingAuth(false);
+    }
+  };
+
+  const handleJoinAsStudent = async () => {
+    if (isLoggedIn) {
+      // User is logged in, redirect to student dashboard
+      router.push('/home/student');
+    } else {
+      // User is not logged in, redirect to login page
+      router.push('/login');
+    }
+  };
+
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
@@ -117,7 +148,7 @@ export default function LandingPage() {
       <div className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-gray-800/50 transition-all duration-300">
         <div className="px-6 py-4">
           <NavigationBar
-            logo="/logo.png"
+            // logo="/logo.png"
             logoAlt="CampusPlace Logo"
             items={navItems}
             activeSection={activeSection}
@@ -164,16 +195,33 @@ export default function LandingPage() {
               </div>
               
               <div className="flex gap-4 mt-8">
-                <button className="flex gap-2 justify-center items-center py-3 px-8 text-lg tracking-tighter text-center bg-blue-500 rounded-md ring-2 ring-offset-2 transition-all hover:ring-transparent group/button w-fit font-manrope text-md text-white ring-blue-400/80 ring-offset-black hover:scale-[1.02] active:scale-[0.98] hover:bg-blue-600 active:ring-blue-400/70">
-                  Join as Student
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 opacity-0 group-hover/button:[animation-delay:.2s] group-hover/button:animate-shineButton rounded-[inherit] bg-[length:200%_100%] bg-[linear-gradient(110deg,transparent,35%,rgba(255,255,255,.7),75%,transparent)]"
-                  />
-                </button>
-                
-                <button className="flex gap-2 justify-center items-center py-3 px-8 text-lg tracking-tighter text-center border-2 border-blue-600 rounded-md transition-all hover:border-blue-400 group/button w-fit font-manrope text-md text-blue-300 hover:text-blue-200 hover:scale-[1.02] active:scale-[0.98]">
-                  Placement Cell Login
+                <button 
+                  onClick={handleJoinAsStudent}
+                  disabled={isCheckingAuth}
+                  className="flex gap-2 justify-center items-center py-3 px-8 text-lg tracking-tighter text-center bg-blue-500 rounded-md ring-2 ring-offset-2 transition-all hover:ring-transparent group/button w-fit font-manrope text-md text-white ring-blue-400/80 ring-offset-black hover:scale-[1.02] active:scale-[0.98] hover:bg-blue-600 active:ring-blue-400/70 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCheckingAuth ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Checking...
+                    </>
+                  ) : isLoggedIn ? (
+                    <>
+                      Go to Dashboard
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 opacity-0 group-hover/button:[animation-delay:.2s] group-hover/button:animate-shineButton rounded-[inherit] bg-[length:200%_100%] bg-[linear-gradient(110deg,transparent,35%,rgba(255,255,255,.7),75%,transparent)]"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      Join as Student
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 opacity-0 group-hover/button:[animation-delay:.2s] group-hover/button:animate-shineButton rounded-[inherit] bg-[length:200%_100%] bg-[linear-gradient(110deg,transparent,35%,rgba(255,255,255,.7),75%,transparent)]"
+                      />
+                    </>
+                  )}
                 </button>
               </div>
 
