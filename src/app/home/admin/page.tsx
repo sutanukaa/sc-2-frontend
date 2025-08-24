@@ -210,12 +210,12 @@ const RoleBasedDashboard: React.FC = () => {
   };
 
   const mockUserStats: UserStats = {
-    name: "Dr. Priya Mehta",
-    course: "PhD Computer Science",
-    stream: "Artificial Intelligence",
-    batch: "Faculty",
-    institute: "Indian Institute of Technology Delhi",
-    cgpa: "N/A",
+    name: "Soumyaraj Bag",
+    course: "Bachelor of Technology",
+    stream: "Computer Science and Engineering",
+    batch: "2026",
+    institute: "RCCIIT",
+    cgpa: "8.2",
     activeBacklogs: 0,
     skillsCount: 25,
     placementStatus: 'eligible',
@@ -234,17 +234,6 @@ const RoleBasedDashboard: React.FC = () => {
     }
   };
 
-  // For testing user role, uncomment this:
-  // const mockUserRole: UserRole = {
-  //   role: 'user',
-  //   permissions: {
-  //     canCreatePosts: false,
-  //     canDeletePosts: false,
-  //     canManageUsers: false,
-  //     canViewAnalytics: false
-  //   }
-  // };
-
   const mockUserOrgStatus: UserOrganizationStatus = {
     isPartOfOrg: true,
     hasActiveInvite: false,
@@ -257,8 +246,6 @@ const RoleBasedDashboard: React.FC = () => {
       totalMembers: 2847
     }
   };
-
-  // Remove unused mock data since we're now using real API
   // const mockPosts: Post[] = [
   //   {
   //     $id: "post-1",
@@ -598,7 +585,7 @@ const RoleBasedDashboard: React.FC = () => {
       
       <div className="relative z-10">
         <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-20">
-          <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="w-full max-w-7xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 {/* Campus.IO Logo and Brand */}
@@ -724,7 +711,7 @@ const RoleBasedDashboard: React.FC = () => {
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="w-full max-w-7xl mx-auto px-6 py-8">
           <div className="flex gap-8">
             <main className="flex-1 max-w-2xl">
               <div className="space-y-6">
@@ -743,7 +730,7 @@ const RoleBasedDashboard: React.FC = () => {
                           {userOrgStatus.activeInvite.organization.logo}
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-4">Organization Invitation</h2>
-                        <p className="text-gray-300 mb-6 max-w-md mx-auto">
+                        <p className="text-gray-300 mb-6 w-full mx-auto">
                           You've been invited to join <strong>{userOrgStatus.activeInvite.organization.name}</strong> by {userOrgStatus.activeInvite.invitedBy.name}.
                         </p>
                         
@@ -957,7 +944,7 @@ const RoleBasedDashboard: React.FC = () => {
               </div>
             </main>
 
-            <aside className="w-80 space-y-6">
+            <aside className="w-96 space-y-6">
               {isLoading ? (
                 <div className="bg-gray-900 rounded-xl p-6 border border-gray-800 animate-pulse">
                   <div className="space-y-4">
