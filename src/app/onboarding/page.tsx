@@ -78,6 +78,7 @@ const OnboardingForm: React.FC = () => {
     const [uploadingFiles, setUploadingFiles] = useState<Record<string, boolean>>({});
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [uploadedFiles, setUploadedFiles] = useState<Record<string, {file: File, fileId?: string}>>({});
+    const [successMessages, setSuccessMessages] = useState<Record<string, string>>({});
 
     const totalSteps = 4;
 
@@ -112,6 +113,52 @@ const OnboardingForm: React.FC = () => {
       }
     };
 
+    // Extract GPA from uploaded academic result file
+    const extractGPAFromFile = async (file: File, fileKey: string): Promise<number | null> => {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Use environment variable or fallback to localhost
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+        const apiEndpoint = `${backendUrl}/student/extract-gpa`;
+        
+        console.log(`Calling GPA extraction API: ${apiEndpoint}`);
+        
+        const response = await fetch(apiEndpoint, {
+          method: 'POST',
+          body: formData,
+        });
+        console.log(response);
+        if (!response.ok) {
+          throw new Error(`GPA extraction failed: ${response.status} ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log('GPA extraction result:', result);
+        
+        const extractedGPA = result.GPA;
+        
+        // Check if GPA is a valid number
+        if (extractedGPA && !isNaN(parseFloat(extractedGPA))) {
+          const gpaValue = parseFloat(extractedGPA);
+          // Ensure GPA is within valid range (0-10)
+          if (gpaValue >= 0 && gpaValue <= 10) {
+            console.log(`Successfully extracted GPA: ${gpaValue} for ${fileKey}`);
+            return gpaValue;
+          }
+        }
+        
+        // If GPA is not a valid number or out of range, return 0
+        console.log(`Invalid GPA extracted: ${extractedGPA}, setting to 0 for ${fileKey}`);
+        return 0;
+      } catch (error) {
+        console.error('GPA extraction failed:', error);
+        // Return 0 if extraction fails
+        return 0;
+      }
+    };
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fileKey: string = 'resume') => {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -133,6 +180,34 @@ const OnboardingForm: React.FC = () => {
           setFormData(prev => ({ ...prev, resume_file_id: fileId }));
         }
         
+        // For academic result files, extract GPA and update form
+        if (['10th', '12th', 'sem1', 'sem2', 'sem3', 'sem4', 'sem5', 'sem6'].includes(fileKey)) {
+          // Show extracting state
+          setUploadingFiles(prev => ({ ...prev, [fileKey]: true }));
+          
+          // Extract GPA from the uploaded file
+          const extractedGPA = await extractGPAFromFile(file, fileKey);
+          
+          // Update form data with extracted GPA
+          setFormData(prev => ({ ...prev, [fileKey]: extractedGPA }));
+          
+          // Upload file to bucket
+          const fileId = await uploadFileToBucket(file, fileKey);
+          setUploadedFiles(prev => ({
+            ...prev,
+            [fileKey]: { file, fileId }
+          }));
+          
+          // Show success message
+          setSuccessMessages(prev => ({ ...prev, [fileKey]: 'GPA extracted successfully!' }));
+          setErrors(prev => ({ ...prev, [fileKey]: '' }));
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+            setSuccessMessages(prev => ({ ...prev, [fileKey]: '' }));
+          }, 3000);
+        }
+        
         // Clear any existing errors for this field
         if (errors[fileKey]) {
           setErrors(prev => ({ ...prev, [fileKey]: '' }));
@@ -140,6 +215,8 @@ const OnboardingForm: React.FC = () => {
       } catch (error) {
         console.error('File upload failed:', error);
         setErrors(prev => ({ ...prev, [fileKey]: 'File upload failed. Please try again.' }));
+      } finally {
+        setUploadingFiles(prev => ({ ...prev, [fileKey]: false }));
       }
     };
 
@@ -493,9 +570,18 @@ const OnboardingForm: React.FC = () => {
                   'border-gray-600 hover:border-gray-500'
                 }`}>
                   {uploadingFiles[key] ? (
-                    <div className="text-blue-400 text-sm">Uploading...</div>
+                    <div className="text-blue-400 text-sm">
+                      {uploadedFiles[key]?.file ? 'Extracting GPA...' : 'Uploading...'}
+                    </div>
                   ) : uploadedFiles[key] ? (
-                    <div className="text-green-400 text-sm">✓ Uploaded</div>
+                    <div className="text-green-400 text-sm">
+                      ✓ Uploaded
+                      {formData[key] !== undefined && (
+                        <div className="text-xs text-green-300 mt-1">
+                          GPA: {formData[key]}
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <label className="cursor-pointer flex items-center justify-center">
                       <Upload className="w-4 h-4 mr-2 text-gray-400" />
@@ -521,6 +607,21 @@ const OnboardingForm: React.FC = () => {
                   className="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white focus:border-blue-500 focus:outline-none transition-colors"
                   placeholder="Enter GPA (0-10)"
                 />
+                {uploadedFiles[key] && formData[key] !== undefined && (
+                  <div className="text-xs text-green-400 mt-1">
+                    ✓ Auto-extracted from file
+                  </div>
+                )}
+                {successMessages[key] && (
+                  <div className="text-xs text-green-400 mt-1 animate-pulse">
+                    {successMessages[key]}
+                  </div>
+                )}
+                {errors[key] && (
+                  <div className="text-xs text-red-400 mt-1">
+                    {errors[key]}
+                  </div>
+                )}
               </div>
             </div>
           </div>

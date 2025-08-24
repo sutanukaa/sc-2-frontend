@@ -90,6 +90,8 @@ const PostDetailPage: React.FC = () => {
   const { postId } = useParams<{ postId: string }>();
   const [activeTab, setActiveTab] = useState<'post' | 'summarise' | 'planner'>('post');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isPlannerLoading, setIsPlannerLoading] = useState<boolean>(false);
+  const [plannerError, setPlannerError] = useState<string | null>(null);
   const [post, setPost] = useState<PostDetail | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [eligibility, setEligibility] = useState<EligibilityCheck | null>(null);
@@ -235,16 +237,73 @@ const PostDetailPage: React.FC = () => {
     }
   }, []);
 
-  // Fetch study plan data (keeping mock for now as it's not part of post API)
+  // Fetch study plan data from planner API
   const fetchStudyPlanData = useCallback(async () => {
     try {
-      // For now, using mock data since study plan API is separate
-      // TODO: Implement real study plan API call
-      setStudyPlan(mockStudyPlan);
+      if (!post || !userStats) {
+        console.log('Post or user stats not available for planner API call');
+        return;
+      }
+
+      setIsPlannerLoading(true);
+      setPlannerError(null); // Clear previous errors
+
+      // Prepare payload for planner API
+      const plannerPayload = {
+        course: userStats.course,
+        stream: userStats.stream,
+        avg_cgpa: userStats.avg_cgpa,
+        activeBacklogs: userStats.activeBacklogs,
+        skills: userStats.skills,
+        company: post.company || 'Company',
+        role: post.role || 'Role',
+        ctc: post.ctc || 'CTC not specified',
+        applicationProcess: post.applicationProcess || [],
+        criteria: post.criteria || {
+          skills: [],
+          courses: []
+        }
+      };
+
+      console.log('Calling planner API with payload:', plannerPayload);
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+      const apiEndpoint = `${backendUrl}/planner/plan`;
+
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(plannerPayload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Planner API failed: ${response.status} ${response.statusText}`);
+      }
+
+      const studyPlanData = await response.json();
+      console.log('Planner API response:', studyPlanData);
+      
+      setStudyPlan(studyPlanData);
     } catch (err) {
       console.error('Error fetching study plan data:', err);
+      setPlannerError(err instanceof Error ? err.message : 'Failed to generate study plan');
+      // Fallback to mock data if API fails
+      setStudyPlan(mockStudyPlan);
+    } finally {
+      setIsPlannerLoading(false);
     }
-  }, []);
+  }, [post, userStats]);
+
+  const handleTabChange = (tab: 'post' | 'summarise' | 'planner') => {
+    setActiveTab(tab);
+    
+    // Automatically fetch planner data when planner tab is selected
+    if (tab === 'planner' && post && userStats && !studyPlan) {
+      fetchStudyPlanData();
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -267,7 +326,7 @@ const PostDetailPage: React.FC = () => {
     if (postId) {
       loadData();
     }
-  }, [postId, fetchPostData, fetchUserData, fetchEligibilityData, fetchStudyPlanData]);
+  }, [postId]);
 
   const handleApply = async () => {
     if (post) {
@@ -501,7 +560,22 @@ const PostDetailPage: React.FC = () => {
 
   const PlannerTab: React.FC = () => (
     <div className="space-y-6">
-      {studyPlan && (
+      {isPlannerLoading ? (
+        <div className="bg-gray-900 rounded-xl p-12 border border-gray-800 text-center">
+          <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-400">Generating study plan...</p>
+        </div>
+      ) : plannerError ? (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+          <p className="text-red-400 text-sm mb-3">{plannerError}</p>
+          <button 
+            onClick={fetchStudyPlanData}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+          >
+            Retry
+          </button>
+        </div>
+      ) : studyPlan ? (
         <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -568,6 +642,22 @@ const PostDetailPage: React.FC = () => {
               </div>
             ))}
           </div>
+        </div>
+      ) : (
+        <div className="bg-gray-900 rounded-xl p-12 border border-gray-800 text-center">
+          <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Building className="w-12 h-12 text-gray-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Study Plan Not Available</h2>
+          <p className="text-gray-400 mb-8 max-w-md mx-auto">
+            The study plan for this post is not yet generated. Please check back later.
+          </p>
+          <button 
+            onClick={fetchStudyPlanData}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            Generate Plan
+          </button>
         </div>
       )}
     </div>
@@ -639,14 +729,17 @@ const PostDetailPage: React.FC = () => {
                   {(['post', 'summarise', 'planner'] as const).map((tab) => (
                     <button
                       key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`px-6 py-2 rounded-md text-sm font-medium transition-colors capitalize ${
+                      onClick={() => handleTabChange(tab)}
+                      className={`px-6 py-2 rounded-md text-sm font-medium transition-colors capitalize flex items-center gap-2 ${
                         activeTab === tab
                           ? 'bg-blue-600 text-white'
                           : 'text-gray-400 hover:text-white hover:bg-gray-700'
                       }`}
                     >
                       {tab}
+                      {tab === 'planner' && isPlannerLoading && (
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                      )}
                     </button>
                   ))}
                 </div>
