@@ -7,6 +7,7 @@ import GradualSpacing from "./components/GradualSpacing";
 import NavigationBar from "./components/NavigationBar";
 import AboutSection from "./components/AboutSection";
 import FeaturesSection from "./components/FeaturesSection";
+import PlansSection from "./components/PlansSection";
 import { useInView } from "framer-motion";
 import {
   TopLeftShiningLight,
@@ -49,7 +50,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ["home", "about", "features", "contact"];
+      const sections = ["home", "about", "features", "plans", "contact"];
       const navbarHeight = 80;
       const scrollPosition = window.scrollY + navbarHeight + 100; // Account for navbar and add buffer
 
@@ -94,6 +95,7 @@ export default function LandingPage() {
     { label: "Home", sectionId: "home" },
     { label: "About", sectionId: "about" },
     { label: "Features", sectionId: "features" },
+    { label: "Plans", sectionId: "plans" },
     { label: "Contact", sectionId: "contact" },
   ];
   
@@ -205,6 +207,9 @@ export default function LandingPage() {
 
       {/* Features Section */}
       <FeaturesSection id="features" />
+
+      {/* Plans Section */}
+      <PlansSection id="plans" />
 
       {/* Footer */}
       <footer id="contact" className="bg-black/80 text-white py-12 pt-32 relative z-20">
