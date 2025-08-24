@@ -1,6 +1,7 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Clock, Building, Award, TrendingUp, ExternalLink, CheckCircle, XCircle, AlertCircle, Target, Brain } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import parse from 'html-react-parser';
+import { ArrowLeft, Clock, Building, Award, TrendingUp, ExternalLink, CheckCircle, XCircle, AlertCircle, Target } from 'lucide-react';
 import { useParams } from 'next/navigation';
 
 interface UserStats {
@@ -23,30 +24,36 @@ interface UserStats {
 }
 
 interface PostDetail {
-  id: string;
+  $id: string;
   title: string;
   content: string;
-  company: string;
-  website: string;
-  registration_link: string;
-  role: string;
-  ctc: string;
-  type: 'Internship' | 'Full-time' | 'Part-time';
-  criteria: {
-    cgpa: number;
-    backlogs: number;
-    skills: string[];
-    courses: string[];
+  company?: string;
+  website?: string;
+  registration_link?: string;
+  role?: string;
+  ctc?: string;
+  type: 'INTERNSHIP' | 'JOB' | 'ANNOUNCEMENT' | 'OPPORTUNITY' | 'DEADLINE' | 'UPDATE';
+  criteria?: {
+    cgpa?: number;
+    backlogs?: number;
+    skills?: string[];
+    courses?: string[];
     experience?: string;
   };
   author: {
     name: string;
-    role: string;
-    avatar: string;
+    avatar?: string;
   };
-  responsibilities: string[];
-  benefits: string[];
-  applicationProcess: string[];
+  responsibilities?: string[];
+  benefits?: string[];
+  applicationProcess?: string[];
+  eligibility?: {
+    minCGPA?: string;
+    branches?: string[];
+    batch?: string[];
+  };
+  timestamp: string;
+  $createdAt: string;
 }
 
 interface EligibilityCheck {
@@ -87,16 +94,15 @@ const PostDetailPage: React.FC = () => {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [eligibility, setEligibility] = useState<EligibilityCheck | null>(null);
   const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
-  const USE_DUMMY_DATA = true;
-
   const mockUserStats: UserStats = {
     id: "user-1",
-    name: "Rahul Sharma",
+    name: "Soumyaraj Bag",
     course: "Bachelor of Technology",
     stream: "Computer Science Engineering",
     batch: "2026",
-    institute: "Indian Institute of Technology",
+    institute: "RCC Institute of Information Technology",
     avg_cgpa: 8.2,
     activeBacklogs: 1,
     skillsCount: 12,
@@ -112,50 +118,7 @@ const PostDetailPage: React.FC = () => {
     interviewsScheduled: 3
   };
 
-  const mockPost: PostDetail = {
-    id: postId || "post-1",
-    title: "Google SDE Internship 2025 - Summer Program",
-    content: "Google is seeking passionate software engineering interns for our Summer 2025 program. Join our team and work on cutting-edge projects that impact billions of users worldwide.",
-    company: 'Google',
-    website: 'https://google.com',
-    registration_link: 'forms.something.com',
-    role: 'Software Development Engineer Intern',
-    ctc: '₹80,000/month + Benefits',
-    type: "Internship",
-    criteria: {
-      cgpa: 8.0,
-      backlogs: 0,
-      skills: ["JavaScript", "Python", "Data Structures", "Algorithms", "System Design"],
-      courses: ["Computer Science", "Information Technology", "Electronics"],
-      experience: "Previous internship preferred but not mandatory"
-    },
-    author: {
-      name: "Dr. Priya Mehta",
-      role: "Placement Officer",
-      avatar: "👩‍💼"
-    },
-    responsibilities: [
-      "Develop and maintain web applications using modern frameworks",
-      "Collaborate with cross-functional teams on product features",
-      "Write clean, efficient, and well-documented code",
-      "Participate in code reviews and technical discussions",
-      "Contribute to system design and architecture decisions"
-    ],
-    benefits: [
-      "Competitive stipend with performance bonuses",
-      "Free meals and transportation",
-      "Access to Google's learning resources",
-      "Mentorship from senior engineers",
-      "Opportunity for full-time conversion"
-    ],
-    applicationProcess: [
-      "Submit application through campus placement portal",
-      "Online coding assessment (2 hours)",
-      "Technical interview rounds (2-3 rounds)",
-      "HR interview and background verification",
-      "Offer letter and documentation"
-    ]
-  };
+
 
   const mockEligibility: EligibilityCheck = {
     isEligible: false,
@@ -200,9 +163,13 @@ const PostDetailPage: React.FC = () => {
         duration: "2 weeks",
         description: "Master essential DSA concepts required for Google interviews",
         resources: [
-          { title: "Introduction to Algorithms", url: "#", type: "article" },
-          { title: "DSA Video Course", url: "#", type: "video" },
-          { title: "LeetCode Practice", url: "#", type: "tutorial" }
+          { title: "Introduction to Algorithms (CLRS Book)", url: "https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/", type: "article" },
+          { title: "DSA Video Course by Abdul Bari", url: "https://www.youtube.com/playlist?list=PLfqMhTWNBTe0b2nM6JHVCnAkhQRGiZMSJ", type: "video" },
+          { title: "LeetCode Problems – Practice DSA", url: "https://leetcode.com/problemset/all/", type: "tutorial" },
+          { title: "GeeksforGeeks DSA Self-Paced Course", url: "https://practice.geeksforgeeks.org/courses/dsa-self-paced", type: "tutorial" },
+          { title: "Big-O Cheat Sheet", url: "https://www.bigocheatsheet.com/", type: "article" },
+          { title: "InterviewBit DSA Practice", url: "https://www.interviewbit.com/practice/", type: "tutorial" }
+          
         ]
       },
       {
@@ -228,50 +195,82 @@ const PostDetailPage: React.FC = () => {
     ]
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      
-      if (USE_DUMMY_DATA) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setPost(mockPost);
-        setUserStats(mockUserStats);
-        setEligibility(mockEligibility);
-        setStudyPlan(mockStudyPlan);
-      } else {
-        try {
-          const [postResponse, userResponse, eligibilityResponse, planResponse] = await Promise.all([
-            fetch(`/api/posts/${postId}`),
-            fetch('/api/user/profile'),
-            fetch(`/api/posts/${postId}/eligibility`),
-            fetch(`/api/posts/${postId}/study-plan`)
-          ]);
-          
-          const postData = await postResponse.json();
-          const userData = await userResponse.json();
-          const eligibilityData = await eligibilityResponse.json();
-          const planData = await planResponse.json();
-          
-          setPost(postData);
-          setUserStats(userData);
-          setEligibility(eligibilityData);
-          setStudyPlan(planData);
-        } catch (error) {
-          console.error('Error fetching data:', error);
-        }
+  // Fetch post data from API
+  const fetchPostData = useCallback(async () => {
+    if (!postId) return;
+    
+    try {
+      setError(null);
+      const response = await fetch(`/api/post/${postId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch post');
       }
-      
-      setIsLoading(false);
-    };
-
-    fetchData();
+      const postData = await response.json();
+      setPost(postData);
+    } catch (err) {
+      console.error('Error fetching post:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch post');
+    }
   }, [postId]);
 
+  // Fetch user stats (keeping mock for now as it's not part of post API)
+  const fetchUserData = useCallback(async () => {
+    try {
+      // For now, using mock data since user API is separate
+      // TODO: Implement real user API call
+      setUserStats(mockUserStats);
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+    }
+  }, []);
+
+  // Fetch eligibility data (keeping mock for now as it's not part of post API)
+  const fetchEligibilityData = useCallback(async () => {
+    try {
+      // For now, using mock data since eligibility API is separate
+      // TODO: Implement real eligibility API call
+      setEligibility(mockEligibility);
+    } catch (err) {
+      console.error('Error fetching eligibility data:', err);
+    }
+  }, []);
+
+  // Fetch study plan data (keeping mock for now as it's not part of post API)
+  const fetchStudyPlanData = useCallback(async () => {
+    try {
+      // For now, using mock data since study plan API is separate
+      // TODO: Implement real study plan API call
+      setStudyPlan(mockStudyPlan);
+    } catch (err) {
+      console.error('Error fetching study plan data:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        await Promise.all([
+          fetchPostData(),
+          fetchUserData(),
+          fetchEligibilityData(),
+          fetchStudyPlanData()
+        ]);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setError('Failed to load data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (postId) {
+      loadData();
+    }
+  }, [postId, fetchPostData, fetchUserData, fetchEligibilityData, fetchStudyPlanData]);
+
   const handleApply = async () => {
-    if (USE_DUMMY_DATA) {
-      alert('Application submitted successfully!');
-      setPost(prev => prev ? { ...prev, hasUserApplied: true } : null);
-    } else {
+    if (post) {
       try {
         const response = await fetch(`/api/posts/${postId}/apply`, {
           method: 'POST',
@@ -305,72 +304,111 @@ const PostDetailPage: React.FC = () => {
 
   const PostTab: React.FC = () => (
     <div className="space-y-6">
-      {post && (
+      {isLoading ? (
+        <div className="bg-gray-900 rounded-xl p-12 border border-gray-800 text-center">
+          <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading post details...</p>
+        </div>
+      ) : error ? (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+          <p className="text-red-400 text-sm mb-3">{error}</p>
+          <button 
+            onClick={fetchPostData}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+          >
+            Retry
+          </button>
+        </div>
+      ) : !post ? (
+        <div className="bg-gray-900 rounded-xl p-12 border border-gray-800 text-center">
+          <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Building className="w-12 h-12 text-gray-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Post Not Found</h2>
+          <p className="text-gray-400 mb-8 max-w-md mx-auto">
+            The post you're looking for doesn't exist or has been removed.
+          </p>
+          <button 
+            onClick={fetchPostData}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            Refresh
+          </button>
+        </div>
+      ) : (
         <>
           <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-2xl">
-                  {post.company.charAt(0)}
+                  {post.company?.charAt(0) || 'P'}
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-white mb-2">{post.title}</h1>
                   <div className="flex items-center gap-4 text-sm text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <Building className="w-4 h-4" />
-                      {post.company}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <ExternalLink className="w-4 h-4" />
-                      <a href={post.website} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition-colors">
-                        Company Website
-                      </a>
-                    </span>
+                    {post.company && (
+                      <span className="flex items-center gap-1">
+                        <Building className="w-4 h-4" />
+                        {post.company}
+                      </span>
+                    )}
+                    {post.website && (
+                      <span className="flex items-center gap-1">
+                        <ExternalLink className="w-4 h-4" />
+                        <a href={post.website} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400 transition-colors">
+                          Company Website
+                        </a>
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-lg font-semibold text-white mb-1">{post.ctc}</div>
-                <div className="text-sm text-gray-400">Role: {post.role}</div>
+                {post.ctc && (
+                  <div className="text-lg font-semibold text-white mb-1">{post.ctc}</div>
+                )}
+                {post.role && (
+                  <div className="text-sm text-gray-400">Role: {post.role}</div>
+                )}
               </div>
             </div>
 
             <div className="mb-6 p-4 bg-gray-800 rounded-lg">
-              <div className="text-center">
-                <div className="text-xl font-bold text-white">{post.role}</div>
-                <div className="text-xs text-gray-400">Position</div>
-              </div>
+                {parse(post.content)}
             </div>
 
-            <div className="prose prose-invert max-w-none">
-              <p className="text-gray-300 mb-6">{post.content}</p>
-              
-              <div className="grid md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-3">Key Responsibilities</h3>
-                  <ul className="space-y-2">
-                    {post.responsibilities.map((item, index) => (
-                      <li key={index} className="text-gray-300 flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-3">Benefits & Perks</h3>
-                  <ul className="space-y-2">
-                    {post.benefits.map((item, index) => (
-                      <li key={index} className="text-gray-300 flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+            {/* Key Responsibilities - Only show if available */}
+            {post.responsibilities && post.responsibilities.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-white mb-3">Key Responsibilities</h3>
+                <ul className="space-y-2">
+                  {post.responsibilities.map((item, index) => (
+                    <li key={index} className="text-gray-300 flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               </div>
+            )}
 
+            {/* Benefits & Perks - Only show if available */}
+            {post.benefits && post.benefits.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-white mb-3">Benefits & Perks</h3>
+                <ul className="space-y-2">
+                  {post.benefits.map((item, index) => (
+                    <li key={index} className="text-gray-300 flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Application Process - Only show if available */}
+            {post.applicationProcess && post.applicationProcess.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-white mb-3">Application Process</h3>
                 <div className="flex flex-wrap gap-2">
@@ -380,14 +418,14 @@ const PostDetailPage: React.FC = () => {
                         {index + 1}
                       </div>
                       <span className="ml-2 text-gray-300 text-sm">{step}</span>
-                      {index < post.applicationProcess.length - 1 && (
+                      {post.applicationProcess && index < post.applicationProcess.length - 1 && (
                         <div className="mx-3 w-4 h-0.5 bg-gray-600"></div>
                       )}
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </>
       )}
@@ -686,94 +724,101 @@ const PostDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-                <h3 className="font-semibold text-white mb-4">Job Requirements</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Min CGPA</span>
-                    <span className="text-white">{post.criteria.cgpa}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Max Backlogs</span>
-                    <span className="text-white">{post.criteria.backlogs}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400 block mb-2">Required Skills</span>
-                    <div className="flex flex-wrap gap-1">
-                      {post.criteria.skills.map((skill, index) => (
-                        <span
-                          key={index}
-                          className={`px-2 py-1 rounded text-xs ${
-                            userStats.skills.some(s => s.name.toLowerCase() === skill.toLowerCase())
-                              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                              : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                          }`}
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-gray-400 block mb-2">Eligible Courses</span>
-                    <div className="flex flex-wrap gap-1">
-                      {post.criteria.courses.map((course, index) => (
-                        <span
-                          key={index}
-                          className={`px-2 py-1 rounded text-xs ${
-                            userStats.stream.toLowerCase().includes(course.toLowerCase()) || 
-                            course.toLowerCase().includes(userStats.stream.toLowerCase())
-                              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                              : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-                          }`}
-                        >
-                          {course}
-                        </span>
-                      ))}
-                    </div>
+              {/* Eligibility Criteria - Only show if available */}
+              {post.criteria && (
+                <div className="bg-gray-800 rounded-lg p-4 mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Eligibility Criteria</h3>
+                  <div className="space-y-3">
+                    {post.criteria.cgpa && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Min CGPA</span>
+                        <span className="text-white">{post.criteria.cgpa}</span>
+                      </div>
+                    )}
+                    {post.criteria.backlogs !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Max Backlogs</span>
+                        <span className="text-white">{post.criteria.backlogs}</span>
+                      </div>
+                    )}
+                    {post.criteria.skills && post.criteria.skills.length > 0 && (
+                      <div>
+                        <span className="text-gray-400 block mb-2">Required Skills</span>
+                        <div className="flex flex-wrap gap-1">
+                          {post.criteria.skills.map((skill, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded-md text-xs border border-blue-500/30"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {post.criteria.courses && post.criteria.courses.length > 0 && (
+                      <div>
+                        <span className="text-gray-400 block mb-2">Eligible Courses</span>
+                        <div className="flex flex-wrap gap-1">
+                          {post.criteria.courses.map((course, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-green-500/20 text-green-300 rounded-md text-xs border border-green-500/30"
+                            >
+                              {course}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {post.criteria.experience && (
+                      <div>
+                        <span className="text-gray-400 block mb-2">Experience Required</span>
+                        <span className="text-white text-sm">{post.criteria.experience}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-                <h3 className="font-semibold text-white mb-4">Company Info</h3>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="text-2xl">{post.company.charAt(0)}</div>
-                  <div>
-                    <h4 className="font-medium text-white">{post.company}</h4>
-                    <a 
-                      href={post.website}
-                      className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Visit Website
-                    </a>
+              {/* Company Info - Only show if company details available */}
+              {post.company && (
+                <div className="bg-gray-800 rounded-lg p-4">
+                  <h3 className="font-semibold text-white mb-4">Company Info</h3>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="text-2xl">{post.company.charAt(0)}</div>
+                    <div>
+                      <h4 className="font-medium text-white">{post.company}</h4>
+                    </div>
                   </div>
+                  {post.website && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <ExternalLink className="w-4 h-4 text-gray-400" />
+                      <a 
+                        href={post.website} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        Visit Website
+                      </a>
+                    </div>
+                  )}
+                  {post.registration_link && (
+                    <div className="mt-3">
+                      <a 
+                        href={post.registration_link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Apply Now
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  )}
                 </div>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Position Type</span>
-                    <span className="text-white">{post.type}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Salary</span>
-                    <span className="text-white">{post.ctc}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Registration</span>
-                    <a 
-                      href={post.registration_link} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 transition-colors"
-                    >
-                      Apply Here
-                    </a>
-                  </div>
-                </div>
-              </div>
+              )}
             </aside>
           </div>
         </div>

@@ -265,7 +265,7 @@ const OnboardingForm: React.FC = () => {
         throw new Error(result.error || "Failed to update profile");
       }
 
-      router.push("/home");
+      router.push("/home/student");
     } catch (err: any) {
       console.error('Submission error:', err);
       setError(err.message || "Something went wrong");

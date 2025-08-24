@@ -2,6 +2,8 @@
 
 import React from "react";
 import Image from "next/image";
+import { OAuthProvider } from "appwrite";
+import { account } from "@/lib/appwrite";
 
 interface NavItem {
   label: string;
@@ -27,6 +29,19 @@ export default function NavigationBar({
   pillTextColor,
   onNavClick,
 }: NavigationBarProps) {
+  const loginWithGoogle = async () => {
+    try {
+      // Use the redirect URI provided by Appwrite Console
+      account.createOAuth2Session(
+        OAuthProvider.Google,
+        `${window.location.origin}/auth/callback`, // success URL
+        `${window.location.origin}/login` // failure URL (optional)
+      );
+    } catch (error) {
+      console.error("OAuth login error:", error);
+      alert("Login failed. Please try again.");
+    }
+  };
   return (
     <nav className="flex items-center justify-between w-full">
       {/* Logo */}
@@ -68,11 +83,8 @@ export default function NavigationBar({
 
       {/* Login and Signup Buttons */}
       <div className="flex items-center space-x-3">
-        <button className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-colors duration-200">
+        <button onClick={loginWithGoogle} className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-colors duration-200">
           Login
-        </button>
-        <button className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full hover:from-blue-700 hover:to-purple-700 transition-all duration-200 hover:scale-105">
-          Sign Up
         </button>
       </div>
     </nav>

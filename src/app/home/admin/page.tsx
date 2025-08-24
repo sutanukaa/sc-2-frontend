@@ -1,9 +1,10 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { 
-  Calendar, MapPin, Building, User, Award, TrendingUp, Clock, ChevronRight, ExternalLink, Bell, Search, GraduationCap,
-  Plus, Upload, X, Save, Eye, Users, BarChart3, Settings, FileText, DollarSign, Briefcase, Shield
+  Calendar, Building, Award, TrendingUp, Clock, ChevronRight, Bell, Search, GraduationCap,
+  Plus, X, Save, Users, BarChart3, Settings, Briefcase, Shield, FileText
 } from 'lucide-react';
+import { account } from '@/lib/appwrite';
 
 interface UserStats {
   name: string;
@@ -48,36 +49,36 @@ interface UserOrganizationStatus {
 }
 
 interface Post {
-  id: string;
+  $id: string;
   title: string;
   content: string;
+  company?: string;
+  website?: string;
+  registration_link?: string;
+  role?: string;
+  ctc?: string;
+  type: 'INTERNSHIP' | 'JOB' | 'ANNOUNCEMENT' | 'OPPORTUNITY' | 'DEADLINE' | 'UPDATE';
+  criteria?: {
+    cgpa?: number;
+    backlogs?: number;
+    skills?: string[];
+    courses?: string[];
+    experience?: string;
+  };
   author: {
     name: string;
-    role: string;
-    avatar: string;
+    avatar?: string;
+  };
+  responsibilities?: string[];
+  benefits?: string[];
+  applicationProcess?: string[];
+  eligibility?: {
+    minCGPA?: string;
+    branches?: string[];
+    batch?: string[];
   };
   timestamp: string;
-  type: 'announcement' | 'opportunity' | 'update' | 'deadline';
-  tags: string[];
-  attachments?: {
-    name: string;
-    url: string;
-    file?: File;
-  }[];
-  stats: {
-    views: number;
-    applicants?: number;
-  };
-  ctc?: {
-    min: string;
-    max: string;
-    currency: string;
-  };
-  eligibility?: {
-    minCGPA: string;
-    branches: string[];
-    batch: string[];
-  };
+  $createdAt: string;
 }
 
 interface UserRole {
@@ -94,18 +95,14 @@ interface CreatePostForm {
   title: string;
   content: string;
   type: Post['type'];
-  tags: string[];
-  attachments: File[];
-  ctc: {
-    min: string;
-    max: string;
-    currency: string;
-  };
-  eligibility: {
-    minCGPA: string;
-    branches: string[];
-    batch: string[];
-  };
+}
+
+interface AppwriteUser {
+  $id: string;
+  email: string;
+  name?: string;
+  $createdAt: string;
+  $updatedAt: string;
 }
 
 const RoleBasedDashboard: React.FC = () => {
@@ -116,25 +113,101 @@ const RoleBasedDashboard: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isProcessingInvite, setIsProcessingInvite] = useState<boolean>(false);
   const [showCreatePost, setShowCreatePost] = useState<boolean>(false);
-  const [newTagInput, setNewTagInput] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [isCreatingPost, setIsCreatingPost] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<AppwriteUser | null>(null);
   
   const [createPostForm, setCreatePostForm] = useState<CreatePostForm>({
     title: '',
     content: '',
-    type: 'announcement',
-    tags: [],
-    attachments: [],
-    ctc: {
-      min: '',
-      max: '',
-      currency: 'INR'
-    },
-    eligibility: {
-      minCGPA: '',
-      branches: [],
-      batch: []
-    }
+    type: 'ANNOUNCEMENT'
   });
+
+  // Logout function
+  const handleLogout = async () => {
+    try {
+      await account.deleteSession('current');
+      setCurrentUser(null);
+      setPosts([]);
+      setError('Logged out successfully');
+      // Redirect to login page or refresh
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Error logging out:', error);
+      setError('Failed to log out');
+    }
+  };
+
+  // Get current authenticated user
+  const getCurrentUser = async () => {
+    try {
+      const user = await account.get();
+      setCurrentUser(user);
+      return user.$id;
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      setCurrentUser(null);
+      throw new Error('User not authenticated');
+    }
+  };
+
+  // Fetch posts from API
+  const fetchPosts = async () => {
+    try {
+      setError(null);
+      const response = await fetch('/api/post');
+      if (!response.ok) {
+        throw new Error('Failed to fetch posts');
+      }
+      const data = await response.json();
+      setPosts(data.documents || []);
+    } catch (err) {
+      console.error('Error fetching posts:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
+      setPosts([]);
+    }
+  };
+
+  // Create new post via API
+  const createPost = async (postData: CreatePostForm) => {
+    try {
+      setIsCreatingPost(true);
+      setError(null);
+      
+      // Get real authenticated user ID
+      const userId = await getCurrentUser();
+      
+      const response = await fetch('/api/post', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: postData.title,
+          description: postData.content, // API expects 'description' field
+          userId: userId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create post');
+      }
+
+      const result = await response.json();
+      
+      // Refresh posts after successful creation
+      await fetchPosts();
+      
+      return result;
+    } catch (err) {
+      console.error('Error creating post:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create post');
+      throw err;
+    } finally {
+      setIsCreatingPost(false);
+    }
+  };
 
   const mockUserStats: UserStats = {
     name: "Dr. Priya Mehta",
@@ -177,7 +250,7 @@ const RoleBasedDashboard: React.FC = () => {
     hasActiveInvite: false,
     organization: {
       id: "org-1",
-      name: "IIT Delhi Placement Cell",
+      name: "RCCIIT Placement Cell",
       logo: "🏛️",
       type: "college",
       memberSince: "August 2020",
@@ -185,80 +258,80 @@ const RoleBasedDashboard: React.FC = () => {
     }
   };
 
-  const mockPosts: Post[] = [
-    {
-      id: "post-1",
-      title: "Google SDE Internship 2025 - Applications Open",
-      content: "Google is hiring for Software Development Engineer Internship positions. Eligibility: 8.0+ CGPA, CS/IT background. Application deadline: September 15, 2025.",
-      author: {
-        name: "Dr. Priya Mehta",
-        role: "Placement Officer",
-        avatar: "👩‍💼"
-      },
-      timestamp: "2 hours ago",
-      type: "opportunity",
-      tags: ["Internship", "Google", "Software", "High Priority"],
-      stats: {
-        views: 342,
-        applicants: 89
-      },
-      ctc: {
-        min: "8",
-        max: "12",
-        currency: "LPA"
-      },
-      eligibility: {
-        minCGPA: "8.0",
-        branches: ["CSE", "IT", "ECE"],
-        batch: ["2025", "2026"]
-      }
-    },
-    {
-      id: "post-2",
-      title: "Microsoft Campus Drive - Pre-placement Talk",
-      content: "Microsoft will be conducting a pre-placement talk on August 30, 2025. All eligible students are encouraged to attend.",
-      author: {
-        name: "Prof. Amit Kumar",
-        role: "TPO",
-        avatar: "👨‍🏫"
-      },
-      timestamp: "5 hours ago",
-      type: "announcement",
-      tags: ["Microsoft", "PPT", "Campus Drive"],
-      attachments: [
-        { name: "Microsoft_PPT_Details.pdf", url: "#" }
-      ],
-      stats: {
-        views: 567
-      }
-    }
-  ];
+  // Remove unused mock data since we're now using real API
+  // const mockPosts: Post[] = [
+  //   {
+  //     $id: "post-1",
+  //     title: "Google SDE Internship 2025 - Applications Open",
+  //     content: "Google is hiring for Software Development Engineer Internship positions. Eligibility: 8.0+ CGPA, CS/IT background. Application deadline: September 15, 2025.",
+  //     author: {
+  //       name: "Dr. Priya Mehta",
+  //       avatar: "👩‍💼"
+  //     },
+  //     timestamp: "2 hours ago",
+  //     type: "OPPORTUNITY",
+  //     criteria: {
+  //       cgpa: 8.0,
+  //       skills: ["C++", "Python", "Data Structures"]
+  //     },
+  //     eligibility: {
+  //       minCGPA: "8.0",
+  //       branches: ["CSE", "IT", "ECE"],
+  //       batch: ["2025", "2026"]
+  //     },
+  //     $createdAt: "2023-08-20T10:00:00.000Z"
+  //   },
+  //   {
+  //     $id: "post-2",
+  //     title: "Microsoft Campus Drive - Pre-placement Talk",
+  //     content: "Microsoft will be conducting a pre-placement talk on August 30, 2025. All eligible students are encouraged to attend.",
+  //     author: {
+  //       name: "Prof. Amit Kumar",
+  //       avatar: "👨‍🏫"
+  //     },
+  //     timestamp: "5 hours ago",
+  //     type: "ANNOUNCEMENT",
+  //     $createdAt: "2023-08-20T07:00:00.000Z"
+  //   }
+  // ];
 
   const postTypes: { value: Post['type']; label: string; icon: React.ReactNode; color: string }[] = [
-    { value: 'announcement', label: 'Announcement', icon: <Bell className="w-4 h-4" />, color: 'blue' },
-    { value: 'opportunity', label: 'Job Opportunity', icon: <Briefcase className="w-4 h-4" />, color: 'green' },
-    { value: 'update', label: 'Update', icon: <BarChart3 className="w-4 h-4" />, color: 'purple' },
-    { value: 'deadline', label: 'Deadline', icon: <Clock className="w-4 h-4" />, color: 'red' }
+    { value: 'ANNOUNCEMENT', label: 'Announcement', icon: <Bell className="w-4 h-4" />, color: 'blue' },
+    { value: 'OPPORTUNITY', label: 'Job Opportunity', icon: <Briefcase className="w-4 h-4" />, color: 'green' },
+    { value: 'UPDATE', label: 'Update', icon: <BarChart3 className="w-4 h-4" />, color: 'purple' },
+    { value: 'DEADLINE', label: 'Deadline', icon: <Clock className="w-4 h-4" />, color: 'red' }
   ];
-
-  const branches = ['CSE', 'IT', 'ECE', 'EEE', 'ME', 'CE', 'CH', 'BT', 'TT', 'IPE'];
-  const batches = ['2024', '2025', '2026', '2027'];
-  const currencies = ['INR', 'USD', 'LPA'];
 
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setUserStats(mockUserStats);
-      setUserOrgStatus(mockUserOrgStatus);
-      setUserRole(mockUserRole);
-      setPosts(mockPosts);
-      setIsLoading(false);
+      try {
+        // First check if user is authenticated
+        await getCurrentUser();
+        
+        // Then load other data
+        await Promise.all([
+          fetchPosts(),
+          // For now, using mock data since user API is separate
+          // TODO: Implement real user API call
+          Promise.resolve().then(() => setUserStats(mockUserStats)),
+          Promise.resolve().then(() => setUserOrgStatus(mockUserOrgStatus)),
+          Promise.resolve().then(() => setUserRole(mockUserRole))
+        ]);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        if (error instanceof Error && error.message === 'User not authenticated') {
+          setError('Please log in to access this page');
+        } else {
+          setError('Failed to load data');
+        }
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadData();
-  }, []);
+  }, []); // Empty dependency array since we only want to run this once on mount
 
   const handleAcceptInvite = async (inviteId: string) => {
     if (!userOrgStatus?.activeInvite) return;
@@ -297,122 +370,77 @@ const RoleBasedDashboard: React.FC = () => {
     }
   };
 
+  // Check authentication before allowing post creation
   const handleCreatePost = async () => {
     if (!createPostForm.title.trim() || !createPostForm.content.trim()) {
       alert('Please fill in required fields');
       return;
     }
 
+    // Check if user is authenticated
+    if (!currentUser) {
+      setError('Please log in to create posts');
+      return;
+    }
+
     try {
-      // Simulate API call to create post
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      const newPost: Post = {
-        id: `post-${Date.now()}`,
-        title: createPostForm.title,
-        content: createPostForm.content,
-        author: {
-          name: userStats?.name || "Admin",
-          role: "Admin",
-          avatar: "👨‍💼"
-        },
-        timestamp: "Just now",
-        type: createPostForm.type,
-        tags: createPostForm.tags,
-        attachments: createPostForm.attachments.map(file => ({
-          name: file.name,
-          url: URL.createObjectURL(file),
-          file
-        })),
-        stats: {
-          views: 0,
-          applicants: 0
-        },
-        ctc: createPostForm.type === 'opportunity' ? createPostForm.ctc : undefined,
-        eligibility: createPostForm.type === 'opportunity' ? createPostForm.eligibility : undefined
-      };
-
-      setPosts(prevPosts => [newPost, ...prevPosts]);
+      await createPost(createPostForm);
+      alert('Post created successfully!');
       
       // Reset form
       setCreatePostForm({
         title: '',
         content: '',
-        type: 'announcement',
-        tags: [],
-        attachments: [],
-        ctc: { min: '', max: '', currency: 'INR' },
-        eligibility: { minCGPA: '', branches: [], batch: [] }
+        type: 'ANNOUNCEMENT'
       });
       
       setShowCreatePost(false);
-    } catch (error) {
-      console.error('Failed to create post:', error);
+    } catch (err) {
+      if (err instanceof Error && err.message === 'User not authenticated') {
+        setError('Please log in to create posts');
+      } else {
+        alert(`Failed to create post: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    setCreatePostForm(prev => ({
-      ...prev,
-      attachments: [...prev.attachments, ...files]
-    }));
+  // Remove unused functions since they're not implemented in the current API
+  const handleFileUpload = () => {
+    // File upload is not implemented in the current API
+    console.log("File upload not yet implemented in API");
   };
 
-  const removeAttachment = (index: number) => {
-    setCreatePostForm(prev => ({
-      ...prev,
-      attachments: prev.attachments.filter((_, i) => i !== index)
-    }));
+  const removeAttachment = () => {
+    // File attachments are not implemented in the current API
+    console.log("File attachment removal not implemented");
   };
 
   const addTag = () => {
-    if (newTagInput.trim() && !createPostForm.tags.includes(newTagInput.trim())) {
-      setCreatePostForm(prev => ({
-        ...prev,
-        tags: [...prev.tags, newTagInput.trim()]
-      }));
-      setNewTagInput('');
-    }
+    // Tags are not implemented in the current API
+    console.log("Tag addition not implemented");
   };
 
-  const removeTag = (tagToRemove: string) => {
-    setCreatePostForm(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
-    }));
+  const removeTag = () => {
+    // Tags are not implemented in the current API
+    console.log("Tag removal not implemented");
   };
 
-  const toggleBranch = (branch: string) => {
-    setCreatePostForm(prev => ({
-      ...prev,
-      eligibility: {
-        ...prev.eligibility,
-        branches: prev.eligibility.branches.includes(branch)
-          ? prev.eligibility.branches.filter(b => b !== branch)
-          : [...prev.eligibility.branches, branch]
-      }
-    }));
+  const toggleBranch = () => {
+    // Branch selection is not implemented in the current API
+    console.log("Branch selection not implemented");
   };
 
-  const toggleBatch = (batch: string) => {
-    setCreatePostForm(prev => ({
-      ...prev,
-      eligibility: {
-        ...prev.eligibility,
-        batch: prev.eligibility.batch.includes(batch)
-          ? prev.eligibility.batch.filter(b => b !== batch)
-          : [...prev.eligibility.batch, batch]
-      }
-    }));
+  const toggleBatch = () => {
+    // Batch selection is not implemented in the current API
+    console.log("Batch selection not implemented");
   };
 
   const getPostTypeColor = (type: Post['type']) => {
     switch (type) {
-      case 'opportunity': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'announcement': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'deadline': return 'bg-red-500/20 text-red-400 border-red-500/30';
-      case 'update': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
+      case 'OPPORTUNITY': return 'bg-green-500/20 text-green-400 border-green-500/30';
+      case 'ANNOUNCEMENT': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+      case 'DEADLINE': return 'bg-red-500/20 text-red-400 border-red-500/30';
+      case 'UPDATE': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
       default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
   };
@@ -509,201 +537,13 @@ const RoleBasedDashboard: React.FC = () => {
             />
           </div>
 
-          {/* CTC Section - Only for opportunities */}
-          {createPostForm.type === 'opportunity' && (
-            <div className="bg-gray-800 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                Compensation Details
-              </h3>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Min Package</label>
-                  <input
-                    type="text"
-                    value={createPostForm.ctc.min}
-                    onChange={(e) => setCreatePostForm(prev => ({
-                      ...prev,
-                      ctc: { ...prev.ctc, min: e.target.value }
-                    }))}
-                    placeholder="e.g., 8"
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Max Package</label>
-                  <input
-                    type="text"
-                    value={createPostForm.ctc.max}
-                    onChange={(e) => setCreatePostForm(prev => ({
-                      ...prev,
-                      ctc: { ...prev.ctc, max: e.target.value }
-                    }))}
-                    placeholder="e.g., 12"
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Currency</label>
-                  <select
-                    value={createPostForm.ctc.currency}
-                    onChange={(e) => setCreatePostForm(prev => ({
-                      ...prev,
-                      ctc: { ...prev.ctc, currency: e.target.value }
-                    }))}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-blue-500 focus:outline-none"
-                  >
-                    {currencies.map(currency => (
-                      <option key={currency} value={currency}>{currency}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* Eligibility Section - Only for opportunities */}
-          {createPostForm.type === 'opportunity' && (
-            <div className="bg-gray-800 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-                <GraduationCap className="w-4 h-4" />
-                Eligibility Criteria
-              </h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Minimum CGPA</label>
-                  <input
-                    type="text"
-                    value={createPostForm.eligibility.minCGPA}
-                    onChange={(e) => setCreatePostForm(prev => ({
-                      ...prev,
-                      eligibility: { ...prev.eligibility, minCGPA: e.target.value }
-                    }))}
-                    placeholder="e.g., 8.0"
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
 
-                <div>
-                  <label className="block text-xs text-gray-400 mb-2">Eligible Branches</label>
-                  <div className="flex flex-wrap gap-2">
-                    {branches.map(branch => (
-                      <button
-                        key={branch}
-                        type="button"
-                        onClick={() => toggleBranch(branch)}
-                        className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                          createPostForm.eligibility.branches.includes(branch)
-                            ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                            : 'bg-gray-700 text-gray-400 border-gray-600 hover:border-gray-500'
-                        }`}
-                      >
-                        {branch}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs text-gray-400 mb-2">Eligible Batches</label>
-                  <div className="flex flex-wrap gap-2">
-                    {batches.map(batch => (
-                      <button
-                        key={batch}
-                        type="button"
-                        onClick={() => toggleBatch(batch)}
-                        className={`px-3 py-1 rounded-full text-xs border transition-colors ${
-                          createPostForm.eligibility.batch.includes(batch)
-                            ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                            : 'bg-gray-700 text-gray-400 border-gray-600 hover:border-gray-500'
-                        }`}
-                      >
-                        {batch}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* Tags */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Tags</label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={newTagInput}
-                onChange={(e) => setNewTagInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                placeholder="Add a tag..."
-                className="flex-1 p-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm focus:border-blue-500 focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={addTag}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-              >
-                Add
-              </button>
-            </div>
-            {createPostForm.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {createPostForm.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="px-2 py-1 bg-gray-700 text-gray-300 rounded-md text-xs flex items-center gap-1"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      className="text-gray-400 hover:text-red-400"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* File Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Attachments</label>
-            <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-gray-500 transition-colors">
-              <input
-                type="file"
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
-                id="file-upload"
-                accept=".pdf,.doc,.docx,.jpg,.png,.jpeg"
-              />
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-400 text-sm">Click to upload or drag and drop files</p>
-                <p className="text-gray-500 text-xs mt-1">PDF, DOC, DOCX, JPG, PNG (Max 10MB each)</p>
-              </label>
-            </div>
-            {createPostForm.attachments.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {createPostForm.attachments.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-gray-800 rounded">
-                    <span className="text-sm text-gray-300">{file.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeAttachment(index)}
-                      className="text-red-400 hover:text-red-300"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+
+
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4 border-t border-gray-800">
@@ -715,17 +555,42 @@ const RoleBasedDashboard: React.FC = () => {
             </button>
             <button
               onClick={handleCreatePost}
-              disabled={!createPostForm.title.trim() || !createPostForm.content.trim()}
+              disabled={!createPostForm.title.trim() || !createPostForm.content.trim() || isCreatingPost}
               className="flex-1 p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-600/50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
-              <Save className="w-4 h-4" />
-              Create Post
+              {isCreatingPost ? (
+                <>
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  Create Post
+                </>
+              )}
             </button>
           </div>
         </div>
       </div>
     </div>
   );
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) {
+      return `${diffInSeconds}s ago`;
+    } else if (diffInSeconds < 3600) {
+      return `${Math.floor(diffInSeconds / 60)}m ago`;
+    } else if (diffInSeconds < 86400) {
+      return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    } else {
+      return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -743,6 +608,26 @@ const RoleBasedDashboard: React.FC = () => {
                   <div className="flex items-center gap-2 px-3 py-1 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-full">
                     <Shield className="w-4 h-4" />
                     <span className="text-xs font-medium">Admin</span>
+                  </div>
+                )}
+                {currentUser && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full">
+                      <Users className="w-4 h-4" />
+                      <span className="text-xs font-medium">{currentUser.name || currentUser.email}</span>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-full hover:bg-red-500/30 transition-colors text-xs font-medium"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+                {!currentUser && (
+                  <div className="flex items-center gap-2 px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-full">
+                    <Shield className="w-4 h-4" />
+                    <span className="text-xs font-medium">Not Logged In</span>
                   </div>
                 )}
                 {userOrgStatus?.isPartOfOrg && userOrgStatus.organization && (
@@ -764,14 +649,19 @@ const RoleBasedDashboard: React.FC = () => {
                 )}
               </div>
               <div className="flex items-center gap-4">
-                {userRole?.permissions.canCreatePosts && (
+                {/* Create Post Button - Only show if user is authenticated */}
+                {currentUser ? (
                   <button
                     onClick={() => setShowCreatePost(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <Plus className="w-4 h-4" />
-                    Create Post
+                    Create New Post
                   </button>
+                ) : (
+                  <div className="px-4 py-2 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-lg">
+                    <p className="text-sm">Please log in to create posts</p>
+                  </div>
                 )}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -862,112 +752,137 @@ const RoleBasedDashboard: React.FC = () => {
 
                     {/* Scenario 2: User is part of organization - Show posts */}
                     {userOrgStatus?.isPartOfOrg && !userOrgStatus?.hasActiveInvite && (
-                      posts.map((post) => (
-                        <div
-                          key={post.id}
-                          onClick={() => handlePostClick(post.id)}
-                          className="bg-gray-900 rounded-xl p-6 border border-gray-800 hover:border-gray-700 transition-all cursor-pointer group"
-                        >
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                                {post.author.avatar}
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-white">{post.author.name}</h4>
-                                <p className="text-sm text-gray-400">{post.author.role}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2 py-1 rounded-full text-xs border ${getPostTypeColor(post.type)}`}>
-                                {post.type}
-                              </span>
-                              <span className="text-sm text-gray-500">{post.timestamp}</span>
-                            </div>
+                      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+                        <h3 className="font-semibold text-white mb-4">Organization Posts</h3>
+                        {/* Posts Section */}
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-white">Recent Posts</h3>
+                            <button
+                              onClick={fetchPosts}
+                              disabled={isLoading}
+                              className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-600/50 disabled:cursor-not-allowed transition-colors text-sm"
+                            >
+                              <svg className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              {isLoading ? 'Loading...' : 'Refresh'}
+                            </button>
                           </div>
 
-                          <h3 className="text-lg font-semibold text-white mb-3 group-hover:text-blue-400 transition-colors">
-                            {post.title}
-                          </h3>
-                          
-                          <p className="text-gray-300 mb-4 line-clamp-3">
-                            {post.content}
-                          </p>
-
-                          {/* CTC Display for opportunities */}
-                          {post.ctc && (
-                            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                              <div className="flex items-center gap-2 mb-2">
-                                <DollarSign className="w-4 h-4 text-green-400" />
-                                <span className="text-sm font-medium text-green-400">Package</span>
-                              </div>
-                              <p className="text-white font-semibold">
-                                {post.ctc.min} - {post.ctc.max} {post.ctc.currency}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Eligibility Display for opportunities */}
-                          {post.eligibility && (
-                            <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                              <div className="flex items-center gap-2 mb-2">
-                                <GraduationCap className="w-4 h-4 text-blue-400" />
-                                <span className="text-sm font-medium text-blue-400">Eligibility</span>
-                              </div>
-                              <div className="space-y-1 text-sm text-white">
-                                {post.eligibility.minCGPA && (
-                                  <p>Min CGPA: {post.eligibility.minCGPA}</p>
-                                )}
-                                {post.eligibility.branches.length > 0 && (
-                                  <p>Branches: {post.eligibility.branches.join(', ')}</p>
-                                )}
-                                {post.eligibility.batch.length > 0 && (
-                                  <p>Batches: {post.eligibility.batch.join(', ')}</p>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {post.tags.map((tag, index) => (
-                              <span
-                                key={index}
-                                className="px-2 py-1 bg-gray-800 text-gray-300 rounded-md text-xs border border-gray-700"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-
-                          {post.attachments && post.attachments.length > 0 && (
-                            <div className="mb-4">
-                              <p className="text-sm text-gray-400 mb-2">Attachments:</p>
-                              {post.attachments.map((attachment, index) => (
-                                <div key={index} className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300">
-                                  <ExternalLink className="w-4 h-4" />
-                                  <span>{attachment.name}</span>
+                          {error && (
+                            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                              <p className="text-red-400 text-sm mb-3">{error}</p>
+                              {error.includes('log in') ? (
+                                <div className="flex gap-2">
+                                  <button 
+                                    onClick={() => window.location.href = '/login'}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                                  >
+                                    Go to Login
+                                  </button>
+                                  <button 
+                                    onClick={() => setError(null)}
+                                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                                  >
+                                    Dismiss
+                                  </button>
                                 </div>
-                              ))}
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between pt-4 border-t border-gray-800">
-                            <div className="flex items-center gap-4 text-sm text-gray-400">
-                              <span className="flex items-center gap-1">
-                                <Eye className="w-4 h-4" />
-                                {post.stats.views} views
-                              </span>
-                              {post.stats.applicants !== undefined && (
-                                <span className="flex items-center gap-1">
-                                  <Users className="w-4 h-4" />
-                                  {post.stats.applicants} applicants
-                                </span>
+                              ) : (
+                                <button 
+                                  onClick={fetchPosts}
+                                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                                >
+                                  Retry
+                                </button>
                               )}
                             </div>
-                            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-400 transition-colors" />
-                          </div>
+                          )}
+
+                          {posts.length === 0 && !error ? (
+                            <div className="bg-gray-900 rounded-xl p-8 border border-gray-800 border-dashed text-center">
+                              <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <FileText className="w-8 h-8 text-gray-500" />
+                              </div>
+                              <h3 className="text-lg font-semibold text-white mb-2">No Posts Yet</h3>
+                              <p className="text-gray-400 text-sm">Create your first post to get started.</p>
+                            </div>
+                          ) : (
+                            posts.map((post) => (
+                              <div
+                                key={post.$id}
+                                onClick={() => handlePostClick(post.$id)}
+                                className="bg-gray-900 rounded-xl p-6 border border-gray-800 hover:border-gray-700 transition-all cursor-pointer group"
+                              >
+                                <div className="flex items-start justify-between mb-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                                      {post.author.avatar || "👤"}
+                                    </div>
+                                    <div>
+                                      <h4 className="font-medium text-white">{post.author.name}</h4>
+                                      <p className="text-sm text-gray-400">{post.role || "Author"}</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPostTypeColor(post.type)}`}>
+                                      {post.type === 'OPPORTUNITY' ? 'Job Opportunity' : 
+                                       post.type === 'ANNOUNCEMENT' ? 'Announcement' : 
+                                       post.type === 'UPDATE' ? 'Update' : 
+                                       post.type === 'DEADLINE' ? 'Deadline' :
+                                       post.type === 'INTERNSHIP' ? 'Internship' :
+                                       post.type === 'JOB' ? 'Full-time Job' : 'Post'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <h3 className="text-lg font-semibold text-white mb-2">{post.title}</h3>
+                                <p className="text-gray-400 text-sm mb-4 line-clamp-2">{post.content}</p>
+
+                                {/* CTC Display for opportunities */}
+                                {post.ctc && (
+                                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <Briefcase className="w-4 h-4 text-green-400" />
+                                      <span className="text-sm font-medium text-green-400">Compensation</span>
+                                    </div>
+                                    <p className="text-white font-semibold">{post.ctc}</p>
+                                  </div>
+                                )}
+
+                                {/* Eligibility Display for opportunities */}
+                                {post.eligibility && (
+                                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <GraduationCap className="w-4 h-4 text-blue-400" />
+                                      <span className="text-sm font-medium text-blue-400">Eligibility</span>
+                                    </div>
+                                    <div className="space-y-1 text-sm text-white">
+                                      {post.eligibility.minCGPA && (
+                                        <p>Min CGPA: {post.eligibility.minCGPA}</p>
+                                      )}
+                                      {post.eligibility.branches && post.eligibility.branches.length > 0 && (
+                                        <p>Branches: {post.eligibility.branches.join(', ')}</p>
+                                      )}
+                                      {post.eligibility.batch && post.eligibility.batch.length > 0 && (
+                                        <p>Batches: {post.eligibility.batch.join(', ')}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div className="flex items-center justify-between text-sm text-gray-400">
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-4 h-4" />
+                                    {formatTimestamp(post.timestamp || post.$createdAt)}
+                                  </span>
+                                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-400 transition-colors" />
+                                </div>
+                              </div>
+                            ))
+                          )}
                         </div>
-                      ))
+                      </div>
                     )}
 
                     {/* Scenario 3: User not part of org and no invite - Show empty state */}
@@ -1156,53 +1071,6 @@ const RoleBasedDashboard: React.FC = () => {
                 </div>
               )}
 
-              {/* Quick Actions for non-admin users */}
-              {!isLoading && userRole?.role !== 'admin' && (
-                <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-                  <h3 className="font-semibold text-white mb-4">Quick Actions</h3>
-                  <div className="space-y-3">
-                    <button className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                      Update Profile
-                    </button>
-                    {userOrgStatus?.isPartOfOrg ? (
-                      <>
-                        <button className="w-full p-3 bg-gray-800 border border-gray-600 text-white rounded-lg hover:border-gray-500 transition-colors text-sm">
-                          View Applications
-                        </button>
-                        <button className="w-full p-3 bg-gray-800 border border-gray-600 text-white rounded-lg hover:border-gray-500 transition-colors text-sm">
-                          Schedule Interview
-                        </button>
-                      </>
-                    ) : userOrgStatus?.hasActiveInvite ? (
-                      <>
-                        <button className="w-full p-3 bg-gray-800 border border-gray-600 text-gray-400 rounded-lg cursor-not-allowed text-sm" disabled>
-                          View Applications
-                        </button>
-                        <button className="w-full p-3 bg-gray-800 border border-gray-600 text-gray-400 rounded-lg cursor-not-allowed text-sm" disabled>
-                          Schedule Interview
-                        </button>
-                        <div className="p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                          <p className="text-xs text-yellow-400 text-center">
-                            Accept organization invite to unlock features
-                          </p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <button className="w-full p-3 bg-gray-800 border border-gray-600 text-gray-400 rounded-lg cursor-not-allowed text-sm" disabled>
-                          View Applications
-                        </button>
-                        <button className="w-full p-3 bg-gray-800 border border-gray-600 text-gray-400 rounded-lg cursor-not-allowed text-sm" disabled>
-                          Schedule Interview
-                        </button>
-                        <button className="w-full p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
-                          Join Organization
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
             </aside>
           </div>
         </div>

@@ -1,5 +1,6 @@
 // app/api/posts/route.ts
 import { createPost, getAllPosts } from "@/collections/post";
+import { userDB } from "@/collections/users";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -18,27 +19,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // Fetch user information for author
+    // Fetch user information for author directly from Appwrite users collection
     let authorInfo = null;
     try {
-      const userResponse = await fetch(`${req.url.replace('/api/post', '/api/user')}/${userId}`);
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        authorInfo = {
-          name: userData.name,
-          avatar: userData.avatar || undefined,
-        };
-      } else {
-        return NextResponse.json(
-          { error: "Failed to fetch user information" },
-          { status: 400 }
-        );
-      }
+      const userData = await userDB.get(userId);
+      authorInfo = {
+        name: userData.name,
+        // Note: avatar field is not available in UserData interface
+        // Using name as fallback for avatar display
+      };
     } catch (userError) {
       console.error("User fetch failed:", userError);
       return NextResponse.json(
-        { error: "User service unavailable" },
-        { status: 500 }
+        { error: "Failed to fetch user information" },
+        { status: 400 }
       );
     }
 
@@ -54,9 +48,14 @@ export async function POST(req: Request) {
         );
       }
 
-      // console.log(`${backendUrl}job/summarize`);
+      // Ensure proper URL formatting with forward slash
+      const apiEndpoint = backendUrl.endsWith('/') 
+        ? `${backendUrl}job/summarize`
+        : `${backendUrl}/job/summarize`;
 
-      const summarizeResponse = await fetch(`${backendUrl}job/summarize`, {
+      console.log(`Calling backend API: ${apiEndpoint}`);
+
+      const summarizeResponse = await fetch(apiEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -79,15 +78,26 @@ export async function POST(req: Request) {
           );
         }
       } else {
+        const errorText = await summarizeResponse.text();
+        console.error(`Backend responded with status ${summarizeResponse.status}:`, errorText);
         return NextResponse.json(
-          { error: "Failed to process data with backend" },
+          { error: `Failed to process data with backend: ${summarizeResponse.status}` },
           { status: 500 }
         );
       }
     } catch (summarizeError) {
       console.error("Backend processing failed:", summarizeError);
+      
+      // Provide more specific error messages based on error type
+      let errorMessage = "Backend service unavailable";
+      if (summarizeError instanceof TypeError && summarizeError.message.includes('fetch failed')) {
+        errorMessage = "Cannot connect to backend service. Please check if the backend is running and the URL is correct.";
+      } else if (summarizeError instanceof TypeError && summarizeError.message.includes('Invalid URL')) {
+        errorMessage = "Invalid backend URL configuration. Please check NEXT_PUBLIC_BACKEND_URL environment variable.";
+      }
+      
       return NextResponse.json(
-        { error: "Backend service unavailable" },
+        { error: errorMessage },
         { status: 500 }
       );
     }

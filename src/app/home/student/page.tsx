@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, Building, Award, TrendingUp, Clock, Bell, Search,
-  Users, BarChart3, Settings, Briefcase, Shield, GraduationCap
+  Briefcase, GraduationCap
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface UserStats {
   name: string;
@@ -48,42 +49,55 @@ interface UserOrganizationStatus {
 }
 
 interface Post {
-  id: string;
+  $id: string;
   title: string;
   content: string;
+  company?: string;
+  website?: string;
+  registration_link?: string;
+  role?: string;
+  ctc?: string;
+  type: 'INTERNSHIP' | 'JOB' | 'ANNOUNCEMENT' | 'OPPORTUNITY' | 'DEADLINE' | 'UPDATE';
+  criteria?: {
+    cgpa?: number;
+    backlogs?: number;
+    skills?: string[];
+    courses?: string[];
+    experience?: string;
+  };
   author: {
     name: string;
-    role: string;
+    avatar?: string;
+  };
+  responsibilities?: string[];
+  benefits?: string[];
+  applicationProcess?: string[];
+  eligibility?: {
+    minCGPA?: string;
+    branches?: string[];
+    batch?: string[];
   };
   timestamp: string;
-  type: 'announcement' | 'opportunity' | 'update' | 'deadline';
-  ctc?: {
-    min: string;
-    max: string;
-    currency: string;
-  };
-  eligibility?: {
-    minCGPA: string;
-    branches: string[];
-    batch: string[];
-  };
+  $createdAt: string;
 }
 
 const StudentDashboard: React.FC = () => {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [userOrgStatus, setUserOrgStatus] = useState<UserOrganizationStatus | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [isProcessingInvite, setIsProcessingInvite] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const mockUserStats: UserStats = {
-    name: "Dr. Priya Mehta",
-    course: "PhD Computer Science",
-    stream: "Artificial Intelligence",
-    batch: "Faculty",
-    institute: "Indian Institute of Technology Delhi",
-    cgpa: "N/A",
-    activeBacklogs: 0,
+    name: "Soumyaraj Bag ",
+    course: "Bachelor of Technology",
+    stream: "Computer Science Engineering",
+    batch: "2026",
+    institute: "RCC Institute of Information Technology",
+    cgpa: "8.2",
+    activeBacklogs: 1,
     skillsCount: 25,
     placementStatus: 'eligible',
     appliedJobs: 0,
@@ -95,7 +109,7 @@ const StudentDashboard: React.FC = () => {
     hasActiveInvite: false,
     organization: {
       id: "org-1",
-      name: "IIT Delhi Placement Cell",
+      name: "RCCIIT Placement Cell",
       logo: "🏛️",
       type: "college",
       memberSince: "August 2020",
@@ -103,50 +117,39 @@ const StudentDashboard: React.FC = () => {
     }
   };
 
-  const mockPosts: Post[] = [
-    {
-      id: "1",
-      title: "Internship Opportunity at Microsoft",
-      content: "Microsoft is offering a summer internship for pre-final year students. The program will provide hands-on experience in software development, AI, and cloud technologies. Interested students must apply before the deadline.",
-      author: {
-        name: "Soumyaraj Bag",
-        role: "Placement Coordinator",
-      },
-      timestamp: "2025-08-24T10:30:00Z",
-      type: "opportunity",
-      ctc: {
-        min: "10",
-        max: "15",
-        currency: "LPA",
-      },
-      eligibility: {
-        minCGPA: "7.5",
-        branches: ["CSE", "IT", "ECE"],
-        batch: ["2026"],
-      },
-    },
-    {
-      id: "post-2",
-      title: "Microsoft Campus Drive - Pre-placement Talk",
-      content: "Microsoft will be conducting a pre-placement talk on August 30, 2025. All eligible students are encouraged to attend.",
-      author: {
-        name: "Prof. Amit Kumar",
-        role: "TPO",
-      },
-      timestamp: "5 hours ago",
-      type: "announcement"
+  // Fetch posts from API
+  const fetchPosts = async () => {
+    try {
+      setError(null);
+      const response = await fetch('/api/post');
+      if (!response.ok) {
+        throw new Error('Failed to fetch posts');
+      }
+      const data = await response.json();
+      setPosts(data.documents || []);
+    } catch (err) {
+      console.error('Error fetching posts:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
+      setPosts([]);
     }
-  ];
+  };
 
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setUserStats(mockUserStats);
-      setUserOrgStatus(mockUserOrgStatus);
-      setPosts(mockPosts);
-      setIsLoading(false);
+      try {
+        // Fetch posts from API
+        await fetchPosts();
+        
+        // Set mock user data (keeping this for now as it's not part of the Posted  API)
+        setUserStats(mockUserStats);
+        setUserOrgStatus(mockUserOrgStatus);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setError('Failed to load data');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadData();
@@ -191,10 +194,12 @@ const StudentDashboard: React.FC = () => {
 
   const getPostTypeColor = (type: Post['type']) => {
     switch (type) {
-      case 'opportunity': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'announcement': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'deadline': return 'bg-red-500/20 text-red-400 border-red-500/30';
-      case 'update': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
+      case 'OPPORTUNITY': return 'bg-green-500/20 text-green-400 border-green-500/30';
+      case 'ANNOUNCEMENT': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+      case 'DEADLINE': return 'bg-red-500/20 text-red-400 border-red-500/30';
+      case 'UPDATE': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
+      case 'INTERNSHIP': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+      case 'JOB': return 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30';
       default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
   };
@@ -235,7 +240,7 @@ const StudentDashboard: React.FC = () => {
   };
 
   const handlePostClick = (postId: string) => {
-    console.log(`Navigating to post: ${postId}`);
+    router.push(`/posts/${postId}`);
   };
 
   const PostSkeleton = () => (
@@ -264,7 +269,7 @@ const StudentDashboard: React.FC = () => {
       
       <div className="relative z-10">
         <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-20">
-          <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="max-w-8xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
@@ -303,9 +308,9 @@ const StudentDashboard: React.FC = () => {
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="w-full max-w-7xl mx-auto px-6 py-8">
           <div className="flex gap-8">
-            <main className="flex-1 max-w-2xl">
+            <main className="flex-1 w-full">
               <div className="space-y-6">
                 {isLoading ? (
                   <>
@@ -322,11 +327,11 @@ const StudentDashboard: React.FC = () => {
                           {userOrgStatus.activeInvite.organization.logo}
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-4">Organization Invitation</h2>
-                        <p className="text-gray-300 mb-6 max-w-md mx-auto">
+                        <p className="text-gray-300 mb-6 mx-auto">
                           You&apos;ve been invited to join <strong>{userOrgStatus.activeInvite.organization.name}</strong> by {userOrgStatus.activeInvite.invitedBy.name}.
                         </p>
                         
-                        <div className="bg-gray-800 rounded-lg p-6 mb-6 text-left max-w-md mx-auto">
+                        <div className="bg-gray-800 rounded-lg p-6 mb-6 text-left mx-auto">
                           <div className="space-y-3 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-400">Organization</span>
@@ -378,102 +383,167 @@ const StudentDashboard: React.FC = () => {
 
                     {/* Scenario 2: User is part of organization - Show posts */}
                     {userOrgStatus?.isPartOfOrg && !userOrgStatus?.hasActiveInvite && (
-                      posts.map((post) => (
-                        <div
-                          key={post.id}
-                          onClick={() => handlePostClick(post.id)}
-                          className="bg-gray-900 rounded-xl p-6 border border-gray-800 hover:border-gray-700 transition-all cursor-pointer group"
-                        >
-                          <div className="space-y-4">
-                            <div>
-                              <h3 className="text-lg font-semibold text-white mb-2">{post.title}</h3>
-                              <p className="text-gray-400 text-sm">{post.content}</p>
-                            </div>
-
-                            {/* Post Type Badge */}
-                            <div className="flex items-center gap-2">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPostTypeColor(post.type)}`}>
-                                {post.type === 'opportunity' ? 'Job Opportunity' : 
-                                 post.type === 'announcement' ? 'Announcement' : 
-                                 post.type === 'update' ? 'Update' : 'Deadline'}
-                              </span>
-                            </div>
-
-                            {/* CTC Display for opportunities */}
-                            {post.ctc && (
-                              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Briefcase className="w-4 h-4 text-green-400" />
-                                  <span className="text-sm font-medium text-green-400">Compensation</span>
-                                </div>
-                                <p className="text-white font-semibold">
-                                  {post.ctc.min} - {post.ctc.max} {post.ctc.currency}
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Eligibility Display for opportunities */}
-                            {post.eligibility && (
-                              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <GraduationCap className="w-4 h-4 text-blue-400" />
-                                  <span className="text-sm font-medium text-blue-400">Eligibility Criteria</span>
-                                </div>
-                                <div className="space-y-2 text-sm text-white">
-                                  {post.eligibility.minCGPA && (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-gray-400">Min CGPA:</span>
-                                      <span className="font-medium">{post.eligibility.minCGPA}</span>
-                                    </div>
-                                  )}
-                                  {post.eligibility.branches && post.eligibility.branches.length > 0 && (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-gray-400">Branches:</span>
-                                      <div className="flex flex-wrap gap-1">
-                                        {post.eligibility.branches.map((branch, index) => (
-                                          <span key={index} className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded-md text-xs border border-blue-500/30">
-                                            {branch}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {post.eligibility.batch && post.eligibility.batch.length > 0 && (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-gray-400">Batches:</span>
-                                      <div className="flex flex-wrap gap-1">
-                                        {post.eligibility.batch.map((batch, index) => (
-                                          <span key={index} className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded-md text-xs border border-purple-500/30">
-                                            {batch}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Author and Time */}
-                            <div className="flex items-center justify-between pt-2 border-t border-gray-800">
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                                    {post.author.name.charAt(0)}
-                                  </div>
-                                  <div>
-                                    <p className="text-white text-sm font-medium">{post.author.name}</p>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 text-gray-400 text-sm">
-                                <Clock className="w-4 h-4" />
-                                {formatTimestamp(post.timestamp)}
-                              </div>
-                            </div>
-                          </div>
+                      <>
+                        <div className="flex items-center justify-between w-full mb-6">
+                          <h2 className="text-2xl font-bold text-white">Latest Posts</h2>
+                          <button
+                            onClick={fetchPosts}
+                            disabled={isLoading}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-600/50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <svg className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            {isLoading ? 'Loading...' : 'Refresh'}
+                          </button>
                         </div>
-                      ))
+
+                        {error && (
+                          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
+                            <p className="text-red-400 text-sm">{error}</p>
+                            <button 
+                              onClick={fetchPosts}
+                              className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        )}
+                        
+                        {posts.length === 0 && !error ? (
+                          <div className="bg-gray-900 rounded-xl p-12 border border-gray-800 border-dashed text-center">
+                            <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                              <Building className="w-12 h-12 text-gray-500" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-white mb-4">No Posts Available</h2>
+                            <p className="text-gray-400 mb-8 max-w-md mx-auto">
+                              There are no posts available at the moment. Check back later for new opportunities and announcements.
+                            </p>
+                          </div>
+                        ) : (
+                          posts.map((post) => (
+                            <div
+                              key={post.$id}
+                              onClick={() => handlePostClick(post.$id)}
+                              className="bg-gray-900 rounded-xl p-6 border border-gray-800 hover:border-gray-700 transition-all cursor-pointer group"
+                            >
+                              <div className="space-y-4">
+                                <div onClick={()=> {
+                                  router.push(`/posts/${post.$id}`);
+                                }}>
+                                  <h3 className="text-lg font-semibold text-white mb-2">{post.title}</h3>
+                                  <p className="text-gray-400 text-sm">{post.content}</p>
+                                </div>
+
+                                {/* Post Type Badge */}
+                                <div className="flex items-center gap-2">
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPostTypeColor(post.type)}`}>
+                                    {post.type === 'OPPORTUNITY' ? 'Job Opportunity' : 
+                                     post.type === 'ANNOUNCEMENT' ? 'Announcement' : 
+                                     post.type === 'UPDATE' ? 'Update' : 
+                                     post.type === 'DEADLINE' ? 'Deadline' :
+                                     post.type === 'INTERNSHIP' ? 'Internship' :
+                                     post.type === 'JOB' ? 'Full-time Job' : 'Post'}
+                                  </span>
+                                </div>
+
+                                {/* Company and Role Display */}
+                                {post.company && (
+                                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <Building className="w-4 h-4 text-blue-400" />
+                                      <span className="text-sm font-medium text-blue-400">Company Details</span>
+                                    </div>
+                                    <div className="space-y-2 text-sm text-white">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-gray-400">Company:</span>
+                                        <span className="font-medium">{post.company}</span>
+                                      </div>
+                                      {post.role && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-gray-400">Role:</span>
+                                          <span className="font-medium">{post.role}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* CTC Display for opportunities */}
+                                {post.ctc && (
+                                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <Briefcase className="w-4 h-4 text-green-400" />
+                                      <span className="text-sm font-medium text-green-400">Compensation</span>
+                                    </div>
+                                    <p className="text-white font-semibold">{post.ctc}</p>
+                                  </div>
+                                )}
+
+                                {/* Eligibility Display for opportunities */}
+                                {post.eligibility && (
+                                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <GraduationCap className="w-4 h-4 text-purple-400" />
+                                      <span className="text-sm font-medium text-purple-400">Eligibility Criteria</span>
+                                    </div>
+                                    <div className="space-y-2 text-sm text-white">
+                                      {post.eligibility.minCGPA && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-gray-400">Min CGPA:</span>
+                                          <span className="font-medium">{post.eligibility.minCGPA}</span>
+                                        </div>
+                                      )}
+                                      {post.eligibility.branches && post.eligibility.branches.length > 0 && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-gray-400">Branches:</span>
+                                          <div className="flex flex-wrap gap-1">
+                                            {post.eligibility.branches.map((branch, index) => (
+                                              <span key={index} className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded-md text-xs border border-purple-500/30">
+                                                {branch}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {post.eligibility.batch && post.eligibility.batch.length > 0 && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-gray-400">Batches:</span>
+                                          <div className="flex flex-wrap gap-1">
+                                            {post.eligibility.batch.map((batch, index) => (
+                                              <span key={index} className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded-md text-xs border border-purple-500/30">
+                                                {batch}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Author and Time */}
+                                <div className="flex items-center justify-between pt-2 border-t border-gray-800">
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                                        {post.author.name.charAt(0)}
+                                      </div>
+                                      <div>
+                                        <p className="text-white text-sm font-medium">{post.author.name}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-gray-400 text-sm">
+                                    <Clock className="w-4 h-4" />
+                                    {formatTimestamp(post.timestamp || post.$createdAt)}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </>
                     )}
 
                     {/* Scenario 3: User not part of org and no invite - Show empty state */}
@@ -604,77 +674,7 @@ const StudentDashboard: React.FC = () => {
                 )
               )}
 
-              {/* Organization Card */}
-              {!isLoading && userOrgStatus?.isPartOfOrg && userOrgStatus.organization && (
-                <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-                  <h3 className="font-semibold text-white mb-4">Organization</h3>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="text-2xl">{userOrgStatus.organization.logo}</div>
-                    <div>
-                      <h4 className="font-medium text-white">{userOrgStatus.organization.name}</h4>
-                      <p className="text-sm text-gray-400 capitalize">{userOrgStatus.organization.type}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Member since</span>
-                      <span className="text-white">{userOrgStatus.organization.memberSince}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Total members</span>
-                      <span className="text-white">{userOrgStatus.organization.totalMembers.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
 
-              {/* Quick Actions for users */}
-              {!isLoading && (
-                <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-                  <h3 className="font-semibold text-white mb-4">Quick Actions</h3>
-                  <div className="space-y-3">
-                    <button className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                      Update Profile
-                    </button>
-                    {userOrgStatus?.isPartOfOrg ? (
-                      <>
-                        <button className="w-full p-3 bg-gray-800 border border-gray-600 text-white rounded-lg hover:border-gray-500 transition-colors text-sm">
-                          View Applications
-                        </button>
-                        <button className="w-full p-3 bg-gray-800 border border-gray-600 text-white rounded-lg hover:border-gray-500 transition-colors text-sm">
-                          Schedule Interview
-                        </button>
-                      </>
-                    ) : userOrgStatus?.hasActiveInvite ? (
-                      <>
-                        <button className="w-full p-3 bg-gray-800 border border-gray-600 text-gray-400 rounded-lg cursor-not-allowed text-sm" disabled>
-                          View Applications
-                        </button>
-                        <button className="w-full p-3 bg-gray-800 border border-gray-600 text-gray-400 rounded-lg cursor-not-allowed text-sm" disabled>
-                          Schedule Interview
-                        </button>
-                        <div className="p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                          <p className="text-xs text-yellow-400 text-center">
-                            Accept organization invite to unlock features
-                          </p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <button className="w-full p-3 bg-gray-800 border border-gray-600 text-gray-400 rounded-lg cursor-not-allowed text-sm" disabled>
-                          View Applications
-                        </button>
-                        <button className="w-full p-3 bg-gray-800 border border-gray-600 text-gray-400 rounded-lg cursor-not-allowed text-sm" disabled>
-                          Schedule Interview
-                        </button>
-                        <button className="w-full p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
-                          Join Organization
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
             </aside>
           </div>
         </div>
