@@ -112,7 +112,7 @@ export async function POST(req: Request) {
 
     const post = await createPost({
       title,
-      content: description, // Convert description back to content for DB
+      content: extractedData.content,
       company: extractedData.company,
       website: extractedData.website,
       registration_link: extractedData.registration_link,
